@@ -1,54 +1,63 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  collection, 
-  doc, 
-  onSnapshot, 
+import {
+  collection,
+  doc,
+  onSnapshot,
   updateDoc,
-  arrayUnion,
+  addDoc,
   Timestamp
 } from 'firebase/firestore';
+import type { Table, Order, OrderItem, TableStatus } from '../../types/types';
 import { db } from '../../firebase/firebaseConfig';
 import styles from './WaiterPage.module.css';
 
-type TableStatus = 'free' | 'occupied' | 'reserved';
-
-interface Order {
-  id: string;
-  items: OrderItem[];
-  total: number;
-  timestamp: Timestamp;
-  status: 'pending' | 'completed';
-}
-
-interface OrderItem {
-  id: string;
-  name: string;
-  price: number;
-  quantity: number;
-}
-
-interface Table {
-  id: string;
-  number: number;
-  status: TableStatus;
-  orders: Order[];
-  customerName?: string;
-  reservationTime?: string;
-}
-
 export default function WaiterPage() {
   const [tables, setTables] = useState<Table[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [showOrderModal, setShowOrderModal] = useState(false);
   const [selectedTable, setSelectedTable] = useState<Table | null>(null);
+  const [modalMode, setModalMode] = useState<'view' | 'add' | null>(null);
+  const [menuItems, setMenuItems] = useState<{ name: string; price: number }[]>([]);
   const [newOrder, setNewOrder] = useState<Omit<Order, 'id' | 'timestamp'>>({
+    tableId: '',
     items: [],
     total: 0,
-    status: 'pending'
+    status: 'pending',
+    waiterName: 'Anna'
   });
-  const navigate = useNavigate();
 
+  const navigate = useNavigate();
+  
+  const completeOrder = async (orderId: string, tableId: string) => {
+  await updateDoc(doc(db, 'orders', orderId), {
+    status: 'completed',
+  });
+
+  const pendingOrders = orders.filter(
+    (order) => order.tableId === tableId && order.status === 'pending'
+  );
+
+  if (pendingOrders.length <= 1) {
+    await updateDoc(doc(db, 'tables', tableId), {
+      status: 'free',
+    });
+  }
+};
+
+  // Pobieranie cen menu
+  useEffect(() => {
+  const menuRef = collection(db, 'menu');
+  const unsubscribe = onSnapshot(menuRef, (snapshot) => {
+    const items = snapshot.docs.map(doc => doc.data() as { name: string; price: number });
+    setMenuItems(items);
+  });
+
+  return () => unsubscribe();
+}, []);
+
+  // Pobieranie stolików
   useEffect(() => {
     const tablesRef = collection(db, 'tables');
     const unsubscribe = onSnapshot(tablesRef, (snapshot) => {
@@ -63,35 +72,57 @@ export default function WaiterPage() {
     return () => unsubscribe();
   }, []);
 
+  // Pobieranie zamówień
+  useEffect(() => {
+    const ordersRef = collection(db, 'orders');
+    const unsubscribe = onSnapshot(ordersRef, (snapshot) => {
+      const ordersData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Order[];
+      setOrders(ordersData);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
   const handleTableClick = (table: Table) => {
-    setSelectedTable(table);
-    setShowOrderModal(true);
-  };
+  setSelectedTable(table);
+  setShowOrderModal(true);
+  setModalMode(null);
+};
 
   const addOrderToTable = async () => {
     if (!selectedTable) return;
-    
+
     try {
-      const tableRef = doc(db, 'tables', selectedTable.id);
       const orderWithMetadata = {
         ...newOrder,
-        id: Date.now().toString(),
-        timestamp: Timestamp.now()
+        timestamp: Timestamp.now(),
+        total: 0
       };
 
-      await updateDoc(tableRef, {
-        orders: arrayUnion(orderWithMetadata),
-        status: 'occupied' as TableStatus
+      await addDoc(collection(db, 'orders'), {
+        ...newOrder,
+        tableId: selectedTable.id,
+        timestamp: Timestamp.now(),
+        dataState: 1
+      });
+
+      await updateDoc(doc(db, 'tables', selectedTable.id), {
+        status: 'occupied'
       });
 
       setNewOrder({
+        tableId: selectedTable.id,
         items: [],
         total: 0,
-        status: 'pending'
+        status: 'pending',
+        waiterName: 'Anna'
       });
       closeModal();
     } catch (error) {
-      console.error("Error adding order: ", error);
+      console.error("Błąd podczas dodawania zamówienia:", error);
     }
   };
 
@@ -105,33 +136,39 @@ export default function WaiterPage() {
   return (
     <div className={styles.waiterContainer}>
       <h2 className={styles.pageTitle}>Panel Kelnera</h2>
-      
+
       <div className={styles.tablesGrid}>
-        {tables.map((table) => (
-          <div 
-            key={table.id} 
-            className={`${styles.table} ${styles[`table-${table.status}`]}`}
-            onClick={() => handleTableClick(table)}
-          >
-            <span className={styles.tableNumber}>Stolik {table.number}</span>
-            <span className={styles.tableStatus}>
-              {table.status === 'free' && 'Wolny'}
-              {table.status === 'occupied' && 'Zajęty'}
-              {table.status === 'reserved' && `Rez. ${table.reservationTime}`}
-            </span>
-            {table.customerName && (
-              <span className={styles.customerName}>{table.customerName}</span>
-            )}
-            {table.orders.length > 0 && (
-              <span className={styles.orderCount}>
-                {table.orders.filter(o => o.status === 'pending').length} aktywnych
+        {tables.map((table) => {
+          const activeOrders = orders.filter(
+            (order) => order.tableId === table.id && order.status === 'pending'
+          );
+
+          return (
+            <div
+              key={table.id}
+              className={`${styles.table} ${styles[`table-${table.status}`]}`}
+              onClick={() => handleTableClick(table)}
+            >
+              <span className={styles.tableNumber}>Stolik {table.number}</span>
+              <span className={styles.tableStatus}>
+                {table.status === 'free' && 'Wolny'}
+                {table.status === 'occupied' && 'Zajęty'}
+                {table.status === 'reserved' && `Rez. ${table.reservationTime}`}
               </span>
-            )}
-          </div>
-        ))}
+              {table.customerName && (
+                <span className={styles.customerName}>{table.customerName}</span>
+              )}
+              {activeOrders.length > 0 && (
+                <span className={styles.orderCount}>
+                  {activeOrders.length} aktywnych
+                </span>
+              )}
+            </div>
+          );
+        })}
       </div>
 
-      <button 
+      <button
         className={styles.backButton}
         onClick={() => navigate('/')}
       >
@@ -139,55 +176,169 @@ export default function WaiterPage() {
       </button>
 
       {showOrderModal && selectedTable && (
-        <div className={styles.modalOverlay}>
-          <div className={styles.modalContent}>
-            <h3>Dodaj zamówienie do Stolika {selectedTable.number}</h3>
-            
-            <div className={styles.orderForm}>
-              <div className={styles.formGroup}>
-                <label>Nazwa dania:</label>
-                <input 
-                  type="text" 
-                  onChange={(e) => setNewOrder({
-                    ...newOrder,
-                    items: [...newOrder.items, {
-                      id: Date.now().toString(),
-                      name: e.target.value,
-                      price: 0,
-                      quantity: 1
-                    }]
-                  })}
-                />
-              </div>
-              
-              <div className={styles.orderItems}>
-                {newOrder.items.map(item => (
-                  <div key={item.id} className={styles.orderItem}>
-                    <span>{item.name}</span>
-                    <span>{item.price} zł x {item.quantity}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+  <div className={styles.modalOverlay}>
+    <div className={styles.modalContent}>
+      {/* Tryb początkowy - wybór */}
+      {!modalMode && (
+        <>
+          <h3>Stolik {selectedTable.number}</h3>
+          <div className={styles.modalButtons}>
+            <button
+              className={styles.confirmButton}
+              onClick={() => setModalMode('add')}
+            >
+              Złóż zamówienie
+            </button>
+            <button
+              className={styles.confirmButton}
+              onClick={() => setModalMode('view')}
+            >
+              Zobacz zamówienia
+            </button>
+            <button
+              className={styles.cancelButton}
+              onClick={closeModal}
+            >
+              Anuluj
+            </button>
+          </div>
+        </>
+      )}
 
-            <div className={styles.modalButtons}>
-              <button 
-                className={styles.cancelButton} 
-                onClick={closeModal}
-              >
-                Anuluj
-              </button>
-              <button 
-                className={styles.confirmButton}
-                onClick={addOrderToTable}
-                disabled={newOrder.items.length === 0}
-              >
-                Dodaj zamówienie
-              </button>
+      {/* Tryb podglądu zamówień */}
+      {modalMode === 'view' && (
+        <>
+          <h3>Zamówienia dla stolika {selectedTable.number}</h3>
+          <ul className={styles.orderList}>
+            {orders
+              .filter((order) => order.tableId === selectedTable.id && (order.dataState ?? 1) === 1)
+              .map((order) => (
+                <li key={order.id} className={styles.orderItem}>
+                  <p>Status: {order.status}</p>
+                  <ul>
+                    {order.items.map((item) => (
+                      <li key={item.id}>
+                        {item.name} – {item.price} zł
+                      </li>
+                    ))}
+                  </ul>
+                  <button
+                    className={styles.confirmButton}
+                    onClick={async () => {
+                      try {
+                        await updateDoc(doc(db, 'orders', order.id), {
+                          dataState: 2
+                        });
+                      } catch (error) {
+                        console.error('Błąd przy ukrywaniu zamówienia:', error);
+                      }
+                    }}
+                  >
+                    Zakończ
+                  </button>
+                </li>
+            ))}
+          </ul>
+          <div className={styles.modalButtons}>
+            <button className={styles.cancelButton} onClick={closeModal}>
+              Zamknij
+            </button>
+            <div className={styles.orderSummary}>
+              Razem: {
+                orders
+                  .filter(
+                   (order) =>
+                      order.tableId === selectedTable.id &&
+                      (order.dataState ?? 1) === 1
+                  )
+                  .reduce((sum, order) => sum + order.total, 0)
+              } zł
             </div>
           </div>
-        </div>
+        </>
       )}
+
+      {/* Tryb składania zamówienia */}
+      {modalMode === 'add' && (
+        <>
+          <h3>Nowe zamówienie dla stolika {selectedTable.number}</h3>
+          <div className={styles.orderForm}>
+            {newOrder.items.map((item, index) => (
+              <div key={item.id} className={styles.orderItem}>
+                <select
+                  className={styles.selectInput}
+                  value={item.name}
+                  onChange={(e) => {
+                    const selectedName = e.target.value;
+                    const menuItem = menuItems.find((m) => m.name === selectedName);
+                    const items = [...newOrder.items];
+                  
+                    if (menuItem) {
+                      items[index].name = menuItem.name;
+                      items[index].price = menuItem.price;                    
+                      const total = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+                      setNewOrder({ ...newOrder, items, total });
+                    }
+                  }}
+                >
+                  <option value="">-- Wybierz danie --</option>
+                  {menuItems.map((menuItem) => (
+                    <option key={menuItem.name} value={menuItem.name}>
+                      {menuItem.name} – {menuItem.price} zł
+                    </option>
+                  ))}
+                </select>
+                <button
+                  className={styles.removeItemButton}
+                  onClick={() => {
+                    const updatedItems = newOrder.items.filter((_, i) => i !== index);
+                    const total = updatedItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
+                    setNewOrder({ ...newOrder, items: updatedItems, total });
+                  }}
+                >
+                  Usuń
+                </button>
+              </div>
+            ))}
+
+            <button
+              className={styles.addItemButton}
+              onClick={() =>
+                setNewOrder({
+                  ...newOrder,
+                  items: [
+                    ...newOrder.items,
+                    {
+                      id: Date.now().toString(),
+                      name: '',
+                      price: 0,
+                      quantity: 1
+                    }
+                  ]
+                })
+              }
+            >
+              + Dodaj kolejne danie
+            </button>
+          </div>
+
+          <div className={styles.modalButtons}>
+            <button className={styles.cancelButton} onClick={closeModal}>
+              Anuluj
+            </button>
+            <button
+              className={styles.confirmButton}
+              onClick={addOrderToTable}
+              disabled={newOrder.items.length === 0}
+            >
+              Gotowe
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  </div>
+)}
     </div>
   );
 }
