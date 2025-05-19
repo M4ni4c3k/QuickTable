@@ -207,49 +207,65 @@ export default function WaiterPage() {
 
       {/* Tryb podglądu zamówień */}
       {modalMode === 'view' && (
-        <>
-          <h3>Zamówienia dla stolika {selectedTable.number}</h3>
-          <ul className={styles.orderList}>
-            {orders
-              .filter((order) => order.tableId === selectedTable.id && (order.dataState ?? 1) === 1)
-              .map((order) => (
-                <li key={order.id} className={styles.orderItem}>
-                  <p>Status: {order.status}</p>
-                  <ul>
-                    {order.items.map((item) => (
-                      <li key={item.id}>
-                        {item.name} – {item.price} zł
-                      </li>
-                    ))}
-                  </ul>
-                  <button
-                    className={styles.confirmButton}
-                    onClick={async () => {
-                      try {
-                        await updateDoc(doc(db, 'orders', order.id), {
-                          dataState: 2
-                        });
-                      } catch (error) {
-                        console.error('Błąd przy ukrywaniu zamówienia:', error);
-                      }
-                    }}
-                  >
-                    Zakończ
-                  </button>
+       <>
+         <h3>Zamówienia dla stolika {selectedTable.number}</h3>
+         <ul className={styles.orderList}>
+           {orders
+             .filter(order => order.tableId === selectedTable.id && (order.dataState ?? 1) === 1)
+             .map(order => (
+               <li key={order.id} className={styles.singleOrderCard}>
+                 <p>Status: {order.status}</p>
+                 <ul className={styles.orderItemList}>
+                   {order.items.map(item => (
+                     <li key={item.id}>
+                       {item.name} – {item.price} zł
+                     </li>
+                   ))}
+                 </ul>
                 </li>
-            ))}
+             ))}
           </ul>
+           
           <div className={styles.modalButtons}>
             <button className={styles.cancelButton} onClick={closeModal}>
               Zamknij
             </button>
-            <div className={styles.orderSummary}>
-              Razem: {
-                orders
-                  .filter(
+            <button
+              className={styles.confirmButton}
+              onClick={async () => {
+                const activeOrders = orders.filter(
+                  (order) =>
+                    order.tableId === selectedTable.id &&
+                    (order.dataState ?? 1) === 1
+                );
+              
+                try {
+                  for (const order of activeOrders) {
+                    await updateDoc(doc(db, 'orders', order.id), {
+                      dataState: 2,
+                     status: 'completed'
+                    });
+                  }
+                
+                 await updateDoc(doc(db, 'tables', selectedTable.id), {
+                   status: 'free'
+                 });
+               
+                 closeModal();
+               } catch (error) {
+                 console.error('Błąd przy kończeniu zamówień:', error);
+               }
+             }}
+           >
+             Zakończ wszystkie
+           </button>
+           <div className={styles.orderSummary}>
+             Razem: {
+               orders
+                 .filter(
                    (order) =>
-                      order.tableId === selectedTable.id &&
-                      (order.dataState ?? 1) === 1
+                     order.tableId === selectedTable.id &&
+                     (order.dataState ?? 1) === 1
                   )
                   .reduce((sum, order) => sum + order.total, 0)
               } zł

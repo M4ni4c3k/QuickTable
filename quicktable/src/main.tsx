@@ -8,6 +8,7 @@ import HomePage from './pages/HomePage.tsx'
 import WaiterPage from './pages/WaiterPage/WaiterPage.tsx'
 import ClientPage from './pages/ClientPage/ClientsPage.tsx'
 import LoginPage from './pages/LoginPage/LoginPage.tsx'
+import AdminPage from './pages/AdminPage/AdminPage.tsx'
 
 const router = createBrowserRouter([
   {
@@ -18,6 +19,10 @@ const router = createBrowserRouter([
       {
         index: true,
         element: <HomePage />
+      },
+      {
+        path: 'admin',
+        element: <AdminPage />
       },
       {
         path: 'waiter',

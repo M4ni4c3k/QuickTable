@@ -1,0 +1,134 @@
+.adminContainer {
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.pageTitle {
+  text-align: center;
+  margin-bottom: 2rem;
+  color: var(--dark);
+  font-size: 1.8rem;
+}
+
+.section {
+  margin-bottom: 3rem;
+}
+
+.section h3 {
+  font-size: 1.4rem;
+  color: var(--dark);
+  margin-bottom: 1rem;
+  border-bottom: 2px solid #ccc;
+  padding-bottom: 0.5rem;
+}
+
+.itemRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  align-items: center;
+}
+
+.itemRow input {
+  padding: 0.5rem;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  min-width: 150px;
+}
+
+.itemRow button {
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.2s ease;
+  font-size: 1rem;
+}
+
+/* ZIELONY przycisk: Dodaj / Zapisz */
+.addItemButton,
+.saveButton {
+  background-color: #28a745;
+  color: white;
+  border: none;
+}
+
+.addItemButton:hover,
+.saveButton:hover {
+  background-color: #218838;
+}
+
+/* CZERWONY przycisk: Usuń */
+.deleteButton {
+  background-color: #dc3545;
+  color: white;
+  border: none;
+}
+
+.deleteButton:hover {
+  background-color: #c82333;
+}
+
+.tableStatusText {
+  font-size: 0.9rem;
+  font-style: italic;
+  color: #666;
+}
+
+.inputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+hr {
+  border: none;
+  border-top: 1px solid #ddd;
+  margin: 2rem 0;
+}
+.selectionPanel {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  margin-top: 3rem;
+}
+
+.bigButton {
+  background-color: #007bff;
+  color: white;
+  font-size: 1.2rem;
+  padding: 1rem 2rem;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.bigButton:hover {
+  background-color: #0056b3;
+}
+.backButtonContainer {
+  display: flex;
+  justify-content: center;
+  margin-top: 4rem;
+  margin-bottom: 2rem;
+}
+
+.backButton {
+  background-color: #6c757d;
+  color: white;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.2s ease;
+}
+
+.backButton:hover {
+  background-color: #5a6268;
+}
