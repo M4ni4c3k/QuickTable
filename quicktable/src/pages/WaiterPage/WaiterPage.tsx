@@ -140,7 +140,7 @@ export default function WaiterPage() {
       <div className={styles.tablesGrid}>
         {tables.map((table) => {
           const activeOrders = orders.filter(
-            (order) => order.tableId === table.id && order.status === 'pending'
+            (order) => order.tableId === table.id && (order.dataState ?? 1) === 1
           );
 
           return (
@@ -158,11 +158,24 @@ export default function WaiterPage() {
               {table.customerName && (
                 <span className={styles.customerName}>{table.customerName}</span>
               )}
-              {activeOrders.length > 0 && (
-                <span className={styles.orderCount}>
-                  {activeOrders.length} aktywnych
-                </span>
-              )}
+              {activeOrders.length > 0 && (() => {
+                const statusCounts: Record<string, number> = {};
+                            
+                activeOrders.forEach(order => {
+                  const status = order.status;
+                  statusCounts[status] = (statusCounts[status] || 0) + 1;
+               });
+             
+                const statusText = Object.entries(statusCounts)
+                  .map(([status, count]) => `${count} ${status}`)
+                  .join(', ');
+             
+                return (
+                  <span className={styles.orderCount}>
+                    {activeOrders.length} aktywnych ({statusText})
+                  </span>
+                );
+              })()}
             </div>
           );
         })}

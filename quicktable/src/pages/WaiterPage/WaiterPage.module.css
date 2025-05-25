@@ -241,3 +241,6 @@
   display: flex;
   justify-content: flex-end;
 }
+.orderCount {
+  color: black !important;
+}
