@@ -8,7 +8,7 @@ import {
   addDoc,
   Timestamp
 } from 'firebase/firestore';
-import type { Table, Order, OrderItem, TableStatus } from '../../types/types';
+import type { Table, Order } from '../../types/types';
 import { db } from '../../firebase/firebaseConfig';
 import styles from './WaiterPage.module.css';
 

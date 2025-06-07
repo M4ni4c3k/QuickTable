@@ -1,0 +1,79 @@
+.kitchenPage {
+  padding: 0px 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.toggleButton {
+  padding: 0.5rem 1rem;
+  background-color: var(--primary);
+  color: white;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: background-color 0.2s ease;
+}
+
+.toggleButton:hover {
+  background-color: #0056b3;
+}
+.ordersGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.orderCard {
+  background-color: #fff;
+  border: 2px solid #ccc;
+  border-radius: 1rem;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  padding: 1rem;
+  transition: transform 0.2s ease;
+}
+
+.orderCard:hover {
+  transform: translateY(-4px);
+}
+
+.orderCard h3 {
+  font-size: 1.2rem;
+  margin-bottom: 0.75rem;
+  color: #333;
+}
+
+.orderCard ul {
+  list-style: none;
+  padding-left: 0;
+  margin: 0 0 1rem 0;
+}
+
+.orderCard li {
+  font-size: 0.95rem;
+  margin-bottom: 0.5rem;
+  color: #444;
+}
+
+.checkboxLabel {
+  display: flex;
+  align-items: center;
+  font-size: 0.9rem;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.ordersGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1.5rem;
+}

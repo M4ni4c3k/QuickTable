@@ -11,6 +11,7 @@ import LoginPage from './pages/LoginPage/LoginPage.tsx'
 import AdminPage from './pages/AdminPage/AdminPage.tsx'
 import OrderPage from './pages/OrderPage/OrderPage.tsx'
 import MenuPage from './pages/MenuPage/MenuPage.tsx'
+import KitchenPage from './pages/KitchenPage/KitchenPage.tsx'
 
 const router = createBrowserRouter([
   {
@@ -45,6 +46,10 @@ const router = createBrowserRouter([
       {
         path: 'menu',
         element: <MenuPage />
+      },
+      {
+        path: 'kitchen',
+        element: <KitchenPage />
       }
     ]
   }

@@ -15,7 +15,7 @@ export interface Order {
   items: OrderItem[];
   total: number;
   timestamp: Timestamp;
-  status: 'pending' | 'completed';
+  status: 'pending' | 'completed' | 'done';
   waiterName?: string;
   dataState?: number;
 }

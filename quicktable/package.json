@@ -13,6 +13,7 @@
     "@react-firebase/auth": "^0.2.10",
     "@react-firebase/firestore": "^0.5.5",
     "firebase": "^11.7.1",
+    "framer-motion": "^12.16.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-router-dom": "^7.6.0"
@@ -26,6 +27,7 @@
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.19",
     "globals": "^16.0.0",
+    "prettier": "3.5.3",
     "typescript": "~5.8.3",
     "typescript-eslint": "^8.30.1",
     "vite": "^6.3.5"
