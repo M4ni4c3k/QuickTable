@@ -6,9 +6,11 @@ import App from './App.tsx'
 import ErrorPage from './pages/ErrorPage.tsx'
 import HomePage from './pages/HomePage.tsx'
 import WaiterPage from './pages/WaiterPage/WaiterPage.tsx'
-import ClientPage from './pages/ClientPage/ClientsPage.tsx'
+import ClientPage from './pages/ClientsPage/ClientsPage.tsx'
 import LoginPage from './pages/LoginPage/LoginPage.tsx'
 import AdminPage from './pages/AdminPage/AdminPage.tsx'
+import OrderPage from './pages/OrderPage/OrderPage.tsx'
+import MenuPage from './pages/MenuPage/MenuPage.tsx'
 
 const router = createBrowserRouter([
   {
@@ -35,6 +37,14 @@ const router = createBrowserRouter([
       {
         path: 'login',
         element: <LoginPage />
+      },
+      {
+        path: 'order',
+        element: <OrderPage />
+      },
+      {
+        path: 'menu',
+        element: <MenuPage />
       }
     ]
   }
