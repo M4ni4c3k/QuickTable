@@ -1,134 +1,241 @@
 .adminContainer {
-  padding: 2rem;
-  max-width: 1200px;
+  max-width: 700px;
   margin: 0 auto;
+  padding: 1.5rem;
+  font-family: Arial, sans-serif;
 }
 
 .pageTitle {
   text-align: center;
   margin-bottom: 2rem;
-  color: var(--dark);
-  font-size: 1.8rem;
 }
 
-.section {
-  margin-bottom: 3rem;
+.menuList {
+  list-style: none;
+  padding: 0;
+  margin-bottom: 1.5rem;
 }
 
-.section h3 {
-  font-size: 1.4rem;
-  color: var(--dark);
-  margin-bottom: 1rem;
-  border-bottom: 2px solid #ccc;
-  padding-bottom: 0.5rem;
-}
-
-.itemRow {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  margin-bottom: 1rem;
-  align-items: center;
-}
-
-.itemRow input {
-  padding: 0.5rem;
-  font-size: 1rem;
+.menuListItem {
+  padding: 0.8rem 1rem;
   border: 1px solid #ccc;
-  border-radius: 6px;
-  min-width: 150px;
-}
-
-.itemRow button {
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: bold;
+  margin-bottom: 0.7rem;
+  border-radius: 8px;
   transition: background-color 0.2s ease;
-  font-size: 1rem;
 }
 
-/* ZIELONY przycisk: Dodaj / Zapisz */
-.addItemButton,
-.saveButton {
+.menuListItem:hover {
+  background-color: #f0f0f0;
+  cursor: pointer;
+}
+
+.addItemButton {
+  display: block;
+  max-width: 200px;
+  width: 100%;
+  margin: 1.5rem auto 0 auto;
+  padding: 0.7rem 1.2rem;
   background-color: #28a745;
   color: white;
+  font-weight: 700;
+  font-size: 1.1rem;
   border: none;
-}
-
-.addItemButton:hover,
-.saveButton:hover {
-  background-color: #218838;
-}
-
-/* CZERWONY przycisk: Usuń */
-.deleteButton {
-  background-color: #dc3545;
-  color: white;
-  border: none;
-}
-
-.deleteButton:hover {
-  background-color: #c82333;
-}
-
-.tableStatusText {
-  font-size: 0.9rem;
-  font-style: italic;
-  color: #666;
-}
-
-.inputGroup {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-hr {
-  border: none;
-  border-top: 1px solid #ddd;
-  margin: 2rem 0;
-}
-.selectionPanel {
-  display: flex;
-  justify-content: center;
-  gap: 2rem;
-  margin-top: 3rem;
-}
-
-.bigButton {
-  background-color: #007bff;
-  color: white;
-  font-size: 1.2rem;
-  padding: 1rem 2rem;
-  border-radius: 12px;
-  border: none;
+  border-radius: 10px;
   cursor: pointer;
-  transition: background-color 0.3s ease;
+  transition: background-color 0.25s ease;
 }
 
-.bigButton:hover {
-  background-color: #0056b3;
+.addItemButton:hover {
+  background-color: #1e7e34;
 }
+
 .backButtonContainer {
-  display: flex;
-  justify-content: center;
-  margin-top: 4rem;
-  margin-bottom: 2rem;
+  margin-top: 2rem;
+  text-align: center;
 }
 
 .backButton {
   background-color: #6c757d;
   color: white;
+  font-weight: 700;
+  font-size: 1.1rem;
   padding: 0.75rem 1.5rem;
-  font-size: 1rem;
   border: none;
   border-radius: 8px;
   cursor: pointer;
-  font-weight: bold;
+  min-width: 140px;
   transition: background-color 0.2s ease;
 }
 
 .backButton:hover {
   background-color: #5a6268;
+}
+
+.itemRow {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1rem;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.itemRow label {
+  width: 90px;
+  font-weight: 600;
+}
+
+.itemRow input {
+  flex: 1;
+  padding: 0.5rem 0.75rem;
+  font-size: 1rem;
+  border: 1px solid #bbb;
+  border-radius: 6px;
+  min-width: 140px;
+}
+
+.ingredientsContainer {
+  max-width: 600px;
+  margin: 0 auto 1.5rem auto;
+}
+
+.ingredientRow {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.7rem;
+}
+
+.ingredientRow input {
+  flex: 1;
+  padding: 0.4rem 0.7rem;
+  font-size: 1rem;
+  border: 1px solid #bbb;
+  border-radius: 6px;
+  min-width: 120px;
+  margin-right: 0.6rem;
+}
+
+.deleteButton {
+  background-color: #dc3545;
+  color: white;
+  font-weight: 600;
+  padding: 0.35rem 0.8rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  font-size: 0.9rem;
+  min-width: 80px;
+}
+
+.deleteButton:hover {
+  background-color: #b02a37;
+}
+
+.addIngredientButton {
+  background-color: #007bff;
+  color: white;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 0.95rem;
+  margin-top: 0.7rem;
+  display: block;
+  max-width: 200px;
+}
+
+.addIngredientButton:hover {
+  background-color: #0056b3;
+}
+
+.actionButtonsContainer {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  max-width: 600px;
+  margin: 0 auto 1rem auto;
+}
+
+.saveButton {
+  background-color: #28a745;
+  color: white;
+  font-weight: 700;
+  padding: 0.5rem 1.3rem;
+  font-size: 1rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  min-width: 100px;
+  transition: background-color 0.25s ease;
+}
+
+.saveButton:hover {
+  background-color: #1e7e34;
+}
+.actionButtonsContainer {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  max-width: 700px;
+  width: 100%;
+  padding: 0 1.5rem;
+  box-sizing: border-box;
+  background-color: white; 
+  z-index: 1000;
+  border-top: 1px solid #ddd;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.actionButtonsContainer button {
+  flex: 1;
+  min-width: 140px;
+  font-weight: 700;
+  font-size: 1.1rem;
+  padding: 0.75rem 0;
+  border-radius: 8px;
+  cursor: pointer;
+  border: none;
+  transition: background-color 0.2s ease;
+}
+
+.actionButtonsContainer .saveButton {
+  background-color: #28a745;
+  color: white;
+}
+
+.actionButtonsContainer .saveButton:hover {
+  background-color: #1e7e34;
+}
+
+.actionButtonsContainer .deleteButton {
+  background-color: #dc3545;
+  color: white;
+  font-weight: 700;
+  font-size: 1.1rem;
+  padding: 0.75rem 0;
+  border-radius: 8px;
+}
+
+.actionButtonsContainer .deleteButton:hover {
+  background-color: #b02a37;
+}
+
+.actionButtonsContainer .backButton {
+  background-color: #6c757d;
+  color: white;
+}
+
+.actionButtonsContainer .backButton:hover {
+  background-color: #5a6268;
+}
+.itemLabel {
+  width: 90px;
+  font-weight: 600;
+  display: inline-block;
 }

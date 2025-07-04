@@ -27,3 +27,10 @@ export interface Table {
   customerName?: string;
   reservationTime?: string;
 }
+
+export interface MenuItem {
+  id: string;
+  name: string;
+  price: number;
+  ingredients: string[];
+}

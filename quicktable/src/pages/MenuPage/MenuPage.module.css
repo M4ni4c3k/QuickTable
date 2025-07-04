@@ -1,12 +1,8 @@
 .menuPage {
-  padding: 2rem;
   max-width: 600px;
-  margin: 0 auto;
-}
-
-.menuPage h2 {
-  text-align: center;
-  margin-bottom: 2rem;
+  margin: 2rem auto;
+  padding: 1rem;
+  font-family: Arial, sans-serif;
 }
 
 .menuList {
@@ -18,17 +14,64 @@
 .menuItem {
   display: flex;
   justify-content: space-between;
-  padding: 1rem;
-  margin-bottom: 1rem;
-  background-color: #f8f8f8;
+  padding: 0.75rem 1rem;
+  border: 1px solid #ccc;
+  margin-bottom: 0.5rem;
+  cursor: pointer;
   border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  background-color: #fafafa;
+  transition: background-color 0.2s ease;
 }
 
-.name {
-  font-weight: bold;
+.menuItem:hover,
+.menuItem:focus {
+  background-color: #e6f0ff;
+  outline: none;
 }
 
-.price {
-  color: #555;
+.modalBackdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 1000;
+}
+
+.modal {
+  background: white;
+  padding: 2rem;
+  border-radius: 12px;
+  max-width: 400px;
+  width: 100%;
+  box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+}
+
+.modal h3 {
+  margin-top: 0;
+}
+
+.modal ul {
+  padding-left: 1.2rem;
+  margin-bottom: 1rem;
+}
+
+.closeButton {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 0.5rem 1.2rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background-color 0.3s ease;
+}
+
+.closeButton:hover {
+  background-color: #0056b3;
 }

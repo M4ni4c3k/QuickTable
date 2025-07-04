@@ -9,58 +9,61 @@ import {
 } from 'firebase/firestore';
 import { db } from '../../firebase/firebaseConfig';
 import styles from './AdminPage.module.css';
+import type { MenuItem, Table } from '../../types/types';  
 
 export default function AdminPage() {
-  const [menuItems, setMenuItems] = useState<{ id: string, name: string, price: number }[]>([]);
-  const [tables, setTables] = useState<{ id: string, number: number, status: string, guest?: string }[]>([]);
-  const [newMenuItem, setNewMenuItem] = useState({ name: '', price: 0 });
-  const [newTable, setNewTable] = useState({ number: 0 });
-  const [view, setView] = useState<'menu' | 'tables' | null>(null); // 🆕
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [tables, setTables] = useState<Table[]>([]);
+  const [selectedMenuItem, setSelectedMenuItem] = useState<MenuItem | null>(null);
+  const [addingNewMenuItem, setAddingNewMenuItem] = useState(false);
+  const [newMenuItem, setNewMenuItem] = useState<MenuItem>({
+    id: '', 
+    name: '',
+    price: 0,
+    ingredients: [''],
+  });
+  const [view, setView] = useState<'menu' | 'tables' | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
       const menuSnapshot = await getDocs(collection(db, 'menu'));
       const tableSnapshot = await getDocs(collection(db, 'tables'));
 
-      setMenuItems(menuSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any)));
-      setTables(tableSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any)));
+      setMenuItems(menuSnapshot.docs.map(doc => ({
+        ...(doc.data() as Omit<MenuItem, 'id'>),
+        id: doc.id,
+      })));
+
+      setTables(tableSnapshot.docs.map(doc => ({
+        ...(doc.data() as Omit<Table, 'id'>),
+        id: doc.id,
+      })));
     };
     fetchData();
   }, []);
 
-  const handleMenuUpdate = async (id: string, name: string, price: number) => {
-    await updateDoc(doc(db, 'menu', id), { name, price });
+  const handleMenuUpdate = async (id: string, name: string, price: number, ingredients: string[]) => {
+    await updateDoc(doc(db, 'menu', id), { name, price, ingredients });
+    setMenuItems(menuItems.map(item => item.id === id ? { id, name, price, ingredients } : item));
+    setSelectedMenuItem(null);
   };
 
   const handleAddMenuItem = async () => {
     if (!newMenuItem.name || newMenuItem.price <= 0) return;
-    const newDoc = await addDoc(collection(db, 'menu'), newMenuItem);
-    setMenuItems([...menuItems, { id: newDoc.id, ...newMenuItem }]);
-    setNewMenuItem({ name: '', price: 0 });
+    const newDoc = await addDoc(collection(db, 'menu'), {
+      name: newMenuItem.name,
+      price: newMenuItem.price,
+      ingredients: newMenuItem.ingredients,
+    });
+    setMenuItems([...menuItems, { ...newMenuItem, id: newDoc.id }]);
+    setNewMenuItem({ id: '', name: '', price: 0, ingredients: [''] });
+    setAddingNewMenuItem(false);
   };
 
   const handleDeleteMenuItem = async (id: string) => {
     await deleteDoc(doc(db, 'menu', id));
     setMenuItems(menuItems.filter(item => item.id !== id));
-  };
-
-  const handleTableUpdate = async (id: string, number: number) => {
-    await updateDoc(doc(db, 'tables', id), { number });
-  };
-
-  const handleAddTable = async () => {
-    if (newTable.number <= 0) return;
-    const newDoc = await addDoc(collection(db, 'tables'), {
-      number: newTable.number,
-      status: 'free'
-    });
-    setTables([...tables, { id: newDoc.id, number: newTable.number, status: 'free' }]);
-    setNewTable({ number: 0 });
-  };
-
-  const handleDeleteTable = async (id: string) => {
-    await deleteDoc(doc(db, 'tables', id));
-    setTables(tables.filter(table => table.id !== id));
+    setSelectedMenuItem(null);
   };
 
   if (!view) {
@@ -75,92 +78,191 @@ export default function AdminPage() {
     );
   }
 
-  return (
-    <div className={styles.adminContainer}>
-      <h2 className={styles.pageTitle}>
-        {view === 'menu' ? 'Edycja Menu' : 'Zarządzanie Stolikami'}
-      </h2>
-      {view === 'menu' && (
-        <section className={styles.section}>
-          <h3>Menu</h3>
-          {menuItems.map(item => (
-            <div key={item.id} className={styles.itemRow}>
-              <input
-                value={item.name}
-                onChange={(e) => {
-                  const updated = menuItems.map(m => m.id === item.id ? { ...m, name: e.target.value } : m);
-                  setMenuItems(updated);
-                }}
-              />
-              <input
-                type="number"
-                value={item.price}
-                onChange={(e) => {
-                  const updated = menuItems.map(m => m.id === item.id ? { ...m, price: Number(e.target.value) } : m);
-                  setMenuItems(updated);
-                }}
-              />
-              <button className={styles.saveButton} onClick={() => handleMenuUpdate(item.id, item.name, item.price)}>Zapisz</button>
-              <button className={styles.deleteButton} onClick={() => handleDeleteMenuItem(item.id)}>Usuń</button>
-            </div>
-          ))}
+  if (view === 'menu') {
+    if (!selectedMenuItem && !addingNewMenuItem) {
+      return (
+        <div className={styles.adminContainer}>
+          <h2 className={styles.pageTitle}>Menu - lista dań</h2>
+          <ul className={styles.menuList}>
+            {menuItems.map(item => (
+              <li
+                key={item.id}
+                className={styles.menuListItem}
+                onClick={() => setSelectedMenuItem(item)}
+                style={{ cursor: 'pointer' }}
+              >
+                {item.name}
+              </li>
+            ))}
+          </ul>
+          <button className={styles.addItemButton} onClick={() => setAddingNewMenuItem(true)}>
+            Dodaj nowy produkt
+          </button>
+          <div className={styles.backButtonContainer}>
+            <button className={styles.backButton} onClick={() => setView(null)}>⬅ Wróć</button>
+          </div>
+        </div>
+      );
+    }
+
+    if (selectedMenuItem) {
+      return (
+        <div className={styles.adminContainer}>
+          <h2 className={styles.pageTitle}>Edycja dania</h2>
           <div className={styles.itemRow}>
+            <label>Nazwa:</label>
+            <input
+              value={selectedMenuItem.name}
+              onChange={(e) => setSelectedMenuItem({ ...selectedMenuItem, name: e.target.value })}
+            />
+          </div>
+          <div className={styles.itemRow}>
+            <label>Cena:</label>
+            <input
+              type="number"
+              value={selectedMenuItem.price}
+              onChange={(e) => setSelectedMenuItem({ ...selectedMenuItem, price: Number(e.target.value) })}
+            />
+          </div>
+
+          <div className={styles.ingredientsContainer}>
+            <label className={styles.itemLabel}>Składniki:</label>
+            {selectedMenuItem.ingredients.map((ing, i) => (
+              <div key={i} className={styles.ingredientRow}>
+                <input
+                  type="text"
+                  value={ing}
+                  onChange={(e) => {
+                    const newIngredients = [...selectedMenuItem.ingredients];
+                    newIngredients[i] = e.target.value;
+                    setSelectedMenuItem({ ...selectedMenuItem, ingredients: newIngredients });
+                  }}
+                />
+                <button
+                  className={styles.deleteButton}
+                  onClick={() => {
+                    const newIngredients = [...selectedMenuItem.ingredients];
+                    newIngredients.splice(i, 1);
+                    setSelectedMenuItem({ ...selectedMenuItem, ingredients: newIngredients });
+                  }}
+                >
+                  Usuń
+                </button>
+              </div>
+            ))}
+            <button
+              className={styles.addIngredientButton}
+              onClick={() =>
+                setSelectedMenuItem({ ...selectedMenuItem, ingredients: [...selectedMenuItem.ingredients, ''] })
+              }
+            >
+              Dodaj składnik
+            </button>
+          </div>
+
+          <div className={styles.actionButtonsContainer}>
+            <button
+              className={styles.saveButton}
+              onClick={() =>
+                selectedMenuItem &&
+                handleMenuUpdate(selectedMenuItem.id, selectedMenuItem.name, selectedMenuItem.price, selectedMenuItem.ingredients)
+              }
+            >
+              Zapisz
+            </button>
+            <button
+              className={styles.deleteButton}
+              onClick={() => selectedMenuItem && handleDeleteMenuItem(selectedMenuItem.id)}
+            >
+              Usuń danie
+            </button>
+            <button className={styles.backButton} onClick={() => setSelectedMenuItem(null)}>
+              ⬅ Powrót do listy
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    if (addingNewMenuItem) {
+      return (
+        <div className={styles.adminContainer}>
+          <h2 className={styles.pageTitle}>Dodaj nowe danie</h2>
+          <div className={styles.itemRow}>
+            <label>Nazwa:</label>
             <input
               placeholder="Nazwa"
               value={newMenuItem.name}
               onChange={(e) => setNewMenuItem({ ...newMenuItem, name: e.target.value })}
             />
+          </div>
+          <div className={styles.itemRow}>
+            <label>Cena:</label>
             <input
               type="number"
               placeholder="Cena"
               value={newMenuItem.price}
               onChange={(e) => setNewMenuItem({ ...newMenuItem, price: Number(e.target.value) })}
             />
-            <button className={styles.addItemButton} onClick={handleAddMenuItem}>Dodaj</button>
           </div>
-        </section>
-      )}
 
-      {view === 'tables' && (
-        <section className={styles.section}>
-          <h3>Stoliki</h3>
-          {tables.map(table => (
-            <div key={table.id} className={styles.itemRow}>
-              <div>
-                <strong>Stolik #{table.number}</strong><br />
-                <span className={styles.tableStatusText}>Status: {table.status}</span><br />
-                {table.status !== 'free' && table.guest && (
-                  <span>Gość: {table.guest}</span>
-                )}
+          <div className={styles.ingredientsContainer}>
+            <label>Składniki:</label>
+            {newMenuItem.ingredients.map((ing, i) => (
+              <div key={i} className={styles.ingredientRow}>
+                <input
+                  type="text"
+                  value={ing}
+                  onChange={(e) => {
+                    const updated = [...newMenuItem.ingredients];
+                    updated[i] = e.target.value;
+                    setNewMenuItem({ ...newMenuItem, ingredients: updated });
+                  }}
+                />
+                <button
+                  className={styles.deleteButton}
+                  onClick={() => {
+                    const updated = [...newMenuItem.ingredients];
+                    updated.splice(i, 1);
+                    setNewMenuItem({ ...newMenuItem, ingredients: updated });
+                  }}
+                >
+                  Usuń
+                </button>
               </div>
-              <input
-                type="number"
-                value={table.number}
-                onChange={(e) => {
-                  const updated = tables.map(t => t.id === table.id ? { ...t, number: Number(e.target.value) } : t);
-                  setTables(updated);
-                }}
-              />
-              <button className={styles.saveButton} onClick={() => handleTableUpdate(table.id, table.number)}>Zapisz</button>
-              <button className={styles.deleteButton} onClick={() => handleDeleteTable(table.id)}>Usuń</button>
-            </div>
-          ))}
-          <div className={styles.itemRow}>
-            <input
-              type="number"
-              placeholder="Numer stolika"
-              value={newTable.number}
-              onChange={(e) => setNewTable({ number: Number(e.target.value) })}
-            />
-            <button className={styles.addItemButton} onClick={handleAddTable}>Dodaj</button>
+            ))}
+            <button
+              className={styles.addIngredientButton}
+              onClick={() => setNewMenuItem({ ...newMenuItem, ingredients: [...newMenuItem.ingredients, ''] })}
+            >
+              Dodaj składnik
+            </button>
           </div>
-        </section>
-      )}
-      <div className={styles.backButtonContainer}>
-  <button className={styles.backButton} onClick={() => setView(null)}>
-    ⬅ Wróć
-  </button>
-</div>
-    </div>
-  );
+
+          <button className={styles.addItemButton} onClick={handleAddMenuItem}>
+            Dodaj
+          </button>
+
+          <div className={styles.backButtonContainer}>
+            <button className={styles.backButton} onClick={() => setAddingNewMenuItem(false)}>
+              ⬅ Powrót do listy
+            </button>
+          </div>
+        </div>
+      );
+    }
+  }
+
+  if (view === 'tables') {
+    return (
+      <div className={styles.adminContainer}>
+        <h2 className={styles.pageTitle}>Zarządzanie Stolikami</h2>
+        <div className={styles.backButtonContainer}>
+          <button className={styles.backButton} onClick={() => setView(null)}>⬅ Wróć</button>
+        </div>
+      </div>
+    );
+  }
+
+  return null;
 }

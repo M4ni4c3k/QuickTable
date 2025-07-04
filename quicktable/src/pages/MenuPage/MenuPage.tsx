@@ -2,16 +2,12 @@ import { useEffect, useState } from 'react';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../../firebase/firebaseConfig';
 import styles from './MenuPage.module.css';
-
-type MenuItem = {
-  id: string;
-  name: string;
-  price: number;
-};
+import type { MenuItem } from '../../types/types';
 
 export default function MenuPage() {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
 
   useEffect(() => {
     const fetchMenu = async () => {
@@ -19,7 +15,7 @@ export default function MenuPage() {
         const snapshot = await getDocs(collection(db, 'menu'));
         const items = snapshot.docs.map(doc => ({
           id: doc.id,
-          ...(doc.data() as { name: string; price: number }),
+          ...(doc.data() as Omit<MenuItem, 'id'>),
         }));
         setMenuItems(items);
         setLoading(false);
@@ -37,14 +33,53 @@ export default function MenuPage() {
   return (
     <div className={styles.menuPage}>
       <h2>Nasze Menu</h2>
+
       <ul className={styles.menuList}>
         {menuItems.map(item => (
-          <li key={item.id} className={styles.menuItem}>
+          <li
+            key={item.id}
+            className={styles.menuItem}
+            onClick={() => setSelectedItem(item)}
+            tabIndex={0}
+            role="button"
+            onKeyDown={e => {
+              if (e.key === 'Enter' || e.key === ' ') setSelectedItem(item);
+            }}
+          >
             <span className={styles.name}>{item.name}</span>
             <span className={styles.price}>{item.price} zł</span>
           </li>
         ))}
       </ul>
+
+      {selectedItem && (
+        <div
+          className={styles.modalBackdrop}
+          onClick={() => setSelectedItem(null)}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className={styles.modal}
+            onClick={e => e.stopPropagation()}
+            tabIndex={-1}
+          >
+            <h3>{selectedItem.name}</h3>
+            <p><strong>Składniki:</strong></p>
+            <ul>
+              {selectedItem.ingredients.map((ing, i) => (
+                <li key={i}>{ing}</li>
+              ))}
+            </ul>
+            <button
+              onClick={() => setSelectedItem(null)}
+              className={styles.closeButton}
+            >
+              Zamknij
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
