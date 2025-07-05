@@ -6,6 +6,7 @@ import styles from './LoginPage.module.css';
 const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  
   const { login, loading, error } = useAuth();
   const navigate = useNavigate();
 

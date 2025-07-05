@@ -1,52 +1,115 @@
 .adminContainer {
-  max-width: 700px;
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 1.5rem;
-  font-family: Arial, sans-serif;
+  padding: 2rem;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  background-color: #f8f9fa;
+  min-height: 100vh;
 }
 
 .pageTitle {
   text-align: center;
-  margin-bottom: 2rem;
+  margin-bottom: 2.5rem;
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: #2c3e50;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.selectionPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.adminButton {
+  font-size: 1.1rem;
+  font-weight: 700;
+  padding: 0.75rem 1.5rem;
+  border-radius: 10px;
+  min-width: 140px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bigButton {
+  composes: adminButton;
+  background-color: #007bff;
+  color: white;
+  box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
+  min-height: 80px;
+}
+
+.bigButton:hover {
+  background-color: #0056b3;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 123, 255, 0.4);
+}
+
+.bigButton:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0, 123, 255, 0.3);
 }
 
 .menuList {
   list-style: none;
   padding: 0;
-  margin-bottom: 1.5rem;
+  margin-bottom: 2rem;
+  background-color: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
 }
 
 .menuListItem {
-  padding: 0.8rem 1rem;
-  border: 1px solid #ccc;
-  margin-bottom: 0.7rem;
-  border-radius: 8px;
-  transition: background-color 0.2s ease;
+  padding: 1rem 1.5rem;
+  border: none;
+  border-bottom: 1px solid #e9ecef;
+  margin-bottom: 0;
+  border-radius: 0;
+  transition: all 0.3s ease;
+  background-color: white;
+  font-weight: 500;
+  color: #495057;
+}
+
+.menuListItem:last-child {
+  border-bottom: none;
 }
 
 .menuListItem:hover {
-  background-color: #f0f0f0;
+  background-color: #f8f9fa;
   cursor: pointer;
+  transform: translateX(4px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .addItemButton {
-  display: block;
-  max-width: 200px;
-  width: 100%;
-  margin: 1.5rem auto 0 auto;
-  padding: 0.7rem 1.2rem;
+  composes: adminButton;
   background-color: #28a745;
   color: white;
-  font-weight: 700;
-  font-size: 1.1rem;
-  border: none;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: background-color 0.25s ease;
+  box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
+  max-width: 250px;
+  margin: 2rem auto 0 auto;
+  width: 100%;
 }
 
 .addItemButton:hover {
   background-color: #1e7e34;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(40, 167, 69, 0.4);
+}
+
+.addItemButton:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(40, 167, 69, 0.3);
 }
 
 .backButtonContainer {
@@ -55,99 +118,132 @@
 }
 
 .backButton {
+  composes: adminButton;
   background-color: #6c757d;
   color: white;
-  font-weight: 700;
-  font-size: 1.1rem;
-  padding: 0.75rem 1.5rem;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  min-width: 140px;
-  transition: background-color 0.2s ease;
 }
 
 .backButton:hover {
   background-color: #5a6268;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(108, 117, 125, 0.4);
+}
+
+.backButton:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(108, 117, 125, 0.3);
 }
 
 .itemRow {
   display: flex;
   align-items: center;
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
   max-width: 600px;
   margin-left: auto;
   margin-right: auto;
+  background-color: white;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .itemRow label {
-  width: 90px;
+  width: 120px;
   font-weight: 600;
+  color: #495057;
+  font-size: 1rem;
 }
 
 .itemRow input {
   flex: 1;
-  padding: 0.5rem 0.75rem;
+  padding: 0.75rem 1rem;
   font-size: 1rem;
-  border: 1px solid #bbb;
-  border-radius: 6px;
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
   min-width: 140px;
+  transition: all 0.3s ease;
+  background-color: #f8f9fa;
+}
+
+.itemRow input:focus {
+  outline: none;
+  border-color: #007bff;
+  background-color: white;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
 }
 
 .ingredientsContainer {
   max-width: 600px;
-  margin: 0 auto 1.5rem auto;
+  margin: 0 auto 2rem auto;
+  background-color: white;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .ingredientRow {
   display: flex;
   align-items: center;
-  margin-bottom: 0.7rem;
+  margin-bottom: 1rem;
+  gap: 0.8rem;
 }
 
 .ingredientRow input {
   flex: 1;
-  padding: 0.4rem 0.7rem;
+  padding: 0.75rem 1rem;
   font-size: 1rem;
-  border: 1px solid #bbb;
-  border-radius: 6px;
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
   min-width: 120px;
-  margin-right: 0.6rem;
+  transition: all 0.3s ease;
+  background-color: #f8f9fa;
+}
+
+.ingredientRow input:focus {
+  outline: none;
+  border-color: #007bff;
+  background-color: white;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
 }
 
 .deleteButton {
+  composes: adminButton;
   background-color: #dc3545;
   color: white;
-  font-weight: 600;
-  padding: 0.35rem 0.8rem;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-  font-size: 0.9rem;
-  min-width: 80px;
+  box-shadow: 0 2px 4px rgba(220, 53, 69, 0.3);
 }
 
 .deleteButton:hover {
   background-color: #b02a37;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(220, 53, 69, 0.4);
+}
+
+.deleteButton:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(220, 53, 69, 0.3);
 }
 
 .addIngredientButton {
+  composes: adminButton;
   background-color: #007bff;
   color: white;
-  padding: 0.5rem 1rem;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: 700;
-  font-size: 0.95rem;
-  margin-top: 0.7rem;
-  display: block;
+  box-shadow: 0 3px 6px rgba(0, 123, 255, 0.3);
   max-width: 200px;
+  margin-top: 1rem;
+  width: 100%;
+  font-size: 1.1rem;
 }
 
 .addIngredientButton:hover {
   background-color: #0056b3;
+  transform: translateY(-2px);
+  box-shadow: 0 5px 10px rgba(0, 123, 255, 0.4);
+}
+
+.addIngredientButton:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0, 123, 255, 0.3);
 }
 
 .actionButtonsContainer {
@@ -159,37 +255,34 @@
 }
 
 .saveButton {
+  composes: adminButton;
   background-color: #28a745;
   color: white;
-  font-weight: 700;
-  padding: 0.5rem 1.3rem;
-  font-size: 1rem;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  min-width: 100px;
-  transition: background-color 0.25s ease;
+  box-shadow: 0 3px 6px rgba(40, 167, 69, 0.3);
 }
 
 .saveButton:hover {
   background-color: #1e7e34;
+  transform: translateY(-2px);
+  box-shadow: 0 5px 10px rgba(40, 167, 69, 0.4);
 }
+
+.saveButton:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(40, 167, 69, 0.3);
+}
+
 .actionButtonsContainer {
-  position: fixed;
-  left: 50%;
-  transform: translateX(-50%);
   display: flex;
   justify-content: center;
   gap: 1rem;
-  max-width: 700px;
-  width: 100%;
-  padding: 0 1.5rem;
-  box-sizing: border-box;
-  background-color: white; 
-  z-index: 1000;
-  border-top: 1px solid #ddd;
-  padding-top: 10px;
-  padding-bottom: 10px;
+  max-width: 600px;
+  margin: 2rem auto 1rem auto;
+  padding: 1.5rem;
+  background-color: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e9ecef;
 }
 
 .actionButtonsContainer button {
@@ -198,10 +291,21 @@
   font-weight: 700;
   font-size: 1.1rem;
   padding: 0.75rem 0;
-  border-radius: 8px;
+  border-radius: 10px;
   cursor: pointer;
   border: none;
-  transition: background-color 0.2s ease;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.actionButtonsContainer button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.actionButtonsContainer button:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .actionButtonsContainer .saveButton {
@@ -219,7 +323,7 @@
   font-weight: 700;
   font-size: 1.1rem;
   padding: 0.75rem 0;
-  border-radius: 8px;
+  border-radius: 10px;
 }
 
 .actionButtonsContainer .deleteButton:hover {
@@ -234,8 +338,1130 @@
 .actionButtonsContainer .backButton:hover {
   background-color: #5a6268;
 }
+
 .itemLabel {
-  width: 90px;
+  width: 120px;
   font-weight: 600;
   display: inline-block;
+  color: #495057;
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Reservation Management Styles */
+.dateSelector {
+  margin-bottom: 20px;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+.dateSelector label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 500;
+  color: #495057;
+}
+
+.dateSelector input {
+  padding: 8px 12px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.archiveToggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  font-weight: 500;
+  color: #495057;
+  cursor: pointer;
+}
+
+.archiveToggle input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.reservationsList {
+  margin-bottom: 20px;
+}
+
+.reservationsList h3 {
+  margin-bottom: 15px;
+  color: #495057;
+  font-size: 18px;
+}
+
+.noReservations {
+  text-align: center;
+  color: #6c757d;
+  font-style: italic;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.reservationCard {
+  background: white;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 15px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.reservationHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.statusInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  align-items: flex-end;
+}
+
+.reservationHeader h4 {
+  margin: 0;
+  color: #495057;
+  font-size: 16px;
+}
+
+.statusBadge {
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.statusBadge.pending {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.statusBadge.accepted {
+  background: #d1edff;
+  color: #0c5460;
+}
+
+.statusBadge.rejected {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.statusBadge.cancelled {
+  background: #e2e3e5;
+  color: #383d41;
+}
+
+.dataStateBadge {
+  padding: 2px 6px;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  background: #6c757d;
+  color: white;
+}
+
+.reservationDetails {
+  margin-bottom: 15px;
+}
+
+.reservationDetails p {
+  margin: 5px 0;
+  color: #6c757d;
+  font-size: 14px;
+}
+
+.reservationDetails strong {
+  color: #495057;
+}
+
+.reservationActions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.acceptButton {
+  composes: adminButton;
+  background: #28a745;
+  color: white;
+}
+
+.acceptButton:hover {
+  background: #218838;
+}
+
+.rejectButton {
+  composes: adminButton;
+  background: #dc3545;
+  color: white;
+}
+
+.rejectButton:hover {
+  background: #c82333;
+}
+
+.archiveButton {
+  composes: adminButton;
+  background: #6c757d;
+  color: white;
+}
+
+.archiveButton:hover {
+  background: #5a6268;
+}
+
+.pendingNote {
+  background: #fff3cd;
+  border: 1px solid #ffeaa7;
+  border-radius: 6px;
+  padding: 0.5rem;
+  margin-bottom: 10px;
+}
+
+.pendingNote p {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #856404;
+  font-weight: 500;
+}
+
+/* Hours Management Styles */
+.hoursContainer {
+  display: grid;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.dayHoursCard {
+  background: white;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.dayHoursCard h3 {
+  margin: 0 0 15px 0;
+  color: #495057;
+  font-size: 18px;
+  border-bottom: 2px solid #007bff;
+  padding-bottom: 8px;
+}
+
+.hoursForm {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.hoursForm > label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 500;
+  color: #495057;
+  cursor: pointer;
+}
+
+.hoursForm input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.timeInputs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 6px;
+}
+
+.timeInputs label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-weight: 500;
+  color: #495057;
+}
+
+.timeInputs input {
+  padding: 8px 12px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.timeSlotsSection {
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 6px;
+}
+
+.timeSlotsSection h4 {
+  margin: 0 0 15px 0;
+  color: #495057;
+  font-size: 16px;
+}
+
+.timeSlotsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 10px;
+}
+
+.timeSlotCheckbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  background: white;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s;
+}
+
+.timeSlotCheckbox:hover {
+  background: #e9ecef;
+}
+
+.timeSlotCheckbox input[type="checkbox"] {
+  margin-right: 0.5rem;
+  transform: scale(1.2);
+}
+
+/* Calendar and Blocked Hours Styles */
+.viewToggle {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.toggleButton {
+  composes: adminButton;
+  background-color: #6c757d;
+  color: white;
+}
+
+.toggleButton.active {
+  background-color: #007bff;
+  box-shadow: 0 2px 4px rgba(0, 123, 255, 0.3);
+}
+
+.toggleButton:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(108, 117, 125, 0.4);
+}
+
+.toggleButton.active:hover {
+  box-shadow: 0 4px 8px rgba(0, 123, 255, 0.4);
+}
+
+.fullWidthCalendar {
+  background-color: white;
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  margin-bottom: 2rem;
+  width: 100%;
+}
+
+.calendarHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #e9ecef;
+}
+
+.calendarHeader h3 {
+  font-size: 1.8rem;
+  font-weight: 600;
+  color: #2c3e50;
+  margin: 0;
+}
+
+.monthNavButton {
+  composes: adminButton;
+  background-color: #007bff;
+  color: white;
+  min-width: 60px;
+  font-size: 1.1rem;
+  padding: 0.75rem 1rem;
+}
+
+.monthNavButton:hover {
+  background-color: #0056b3;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 123, 255, 0.4);
+}
+
+.monthNavButton:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0, 123, 255, 0.3);
+}
+
+.calendarGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.calendarWeekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.weekdayHeader {
+  text-align: center;
+  font-weight: 600;
+  color: #495057;
+  padding: 0.5rem;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+.calendarDays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.5rem;
+}
+
+.calendarDay {
+  aspect-ratio: 1;
+  min-height: 60px;
+  max-height: 80px;
+  padding: 0.5rem;
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background-color: white;
+}
+
+.calendarDay:hover {
+  background-color: #f8f9fa;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.calendarDay.today {
+  border-color: #28a745;
+  background-color: #f8fff9;
+}
+
+.calendarDay.pastDay {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.calendarDay.pastDay:hover {
+  border-color: #e9ecef;
+  box-shadow: none;
+  transform: none;
+}
+
+.dayNumber {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #495057;
+  text-align: center;
+}
+
+.dayInfo {
+  display: flex;
+  justify-content: center;
+  gap: 0.25rem;
+  margin-top: 0.25rem;
+}
+
+.openIndicator,
+.closedIndicator,
+.blockedIndicator,
+.noHoursIndicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.openDot,
+.closedDot,
+.blockedDot,
+.noHoursDot {
+  font-size: 0.8rem;
+}
+
+.openIndicator {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.closedIndicator {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.blockedIndicator {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.noHoursIndicator {
+  background-color: #f8f9fa;
+  color: #6c757d;
+  border: 1px solid #e9ecef;
+}
+
+.openDot, .closedDot, .blockedDot, .noHoursDot {
+  font-size: 0.8rem;
+}
+
+.hoursText, .closedText, .blockedText {
+  font-size: 0.6rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.emptyDay {
+  aspect-ratio: 1;
+  background-color: transparent;
+}
+
+.dayDetails {
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-top: 1.5rem;
+  border: 2px solid #e9ecef;
+}
+
+.dayDetails h4 {
+  margin: 0 0 1rem 0;
+  color: #2c3e50;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.closeDetailsButton {
+  background-color: #6c757d;
+  color: white;
+  font-weight: 600;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-top: 1rem;
+  transition: all 0.3s ease;
+}
+
+.closeDetailsButton:hover {
+  background-color: #5a6268;
+  transform: translateY(-1px);
+}
+
+.blockedHoursSection {
+  margin: 1.5rem 0;
+  padding: 1rem;
+  background-color: white;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+.blockedHoursSection h5, .blockedHoursSection h6 {
+  margin: 0 0 0.75rem 0;
+  color: #2c3e50;
+  font-weight: 600;
+}
+
+.blockedHoursList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.blockedRange {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.75rem;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  border: 1px solid #e9ecef;
+  font-weight: 500;
+  color: #495057;
+}
+
+.removeBlockedButton {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.8rem;
+  padding: 0.25rem;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.removeBlockedButton:hover {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.addBlockedHours {
+  border-top: 1px solid #e9ecef;
+  padding-top: 1rem;
+}
+
+.blockedInputs {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.blockedInputs input {
+  padding: 0.5rem;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  min-width: 100px;
+}
+
+.blockedInputs span {
+  font-weight: 600;
+  color: #495057;
+}
+
+.addBlockedButton {
+  background-color: #28a745;
+  color: white;
+  font-weight: 600;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.9rem;
+}
+
+.addBlockedButton:hover {
+  background-color: #1e7e34;
+  transform: translateY(-1px);
+}
+
+.timeSlotItem {
+  padding: 0.5rem 0.75rem;
+  background-color: #10b981;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: white;
+  text-align: center;
+  border: 1px solid #10b981;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.timeSlotItem:hover {
+  transform: scale(1.05);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.timeSlotBlocked {
+  background-color: #ef4444;
+  border-color: #ef4444;
+}
+
+.timeSlotBlocked:hover {
+  background-color: #dc2626;
+  border-color: #dc2626;
+}
+
+.timeSlotsDescription {
+  color: #6b7280;
+  font-size: 0.9rem;
+  margin: 0 0 1rem 0;
+}
+
+/* No Hours State Styles */
+.noHoursInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.7rem;
+}
+
+.noHoursIndicator {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  font-weight: 500;
+  background-color: #f8f9fa;
+  color: #6c757d;
+  border: 1px solid #e9ecef;
+}
+
+.noHoursDot {
+  font-size: 0.6rem;
+}
+
+.noHoursText {
+  font-size: 0.6rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.createHoursButton {
+  background-color: #007bff;
+  color: white;
+  font-size: 0.6rem;
+  font-weight: 600;
+  padding: 0.2rem 0.4rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  margin-top: 0.1rem;
+}
+
+.createHoursButton:hover {
+  background-color: #0056b3;
+  transform: translateY(-1px);
+}
+
+.createHoursButton:active {
+  transform: translateY(0);
+}
+
+/* Hours Summary Styles */
+.hoursSummary {
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-top: 1.5rem;
+  border: 2px solid #e9ecef;
+}
+
+.hoursSummary h4 {
+  margin: 0 0 1rem 0;
+  color: #2c3e50;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.hoursSummaryGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.75rem;
+}
+
+.hoursSummaryItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  background-color: white;
+  border-radius: 6px;
+  border: 1px solid #e9ecef;
+  font-size: 0.9rem;
+}
+
+.dayName {
+  font-weight: 600;
+  color: #495057;
+}
+
+.hoursStatus {
+  font-weight: 500;
+}
+
+.statusOpen {
+  color: #155724;
+}
+
+.statusClosed {
+  color: #721c24;
+}
+
+.statusMissing {
+  color: #6c757d;
+  font-style: italic;
+}
+
+/* New Hours Form Styles */
+.newHoursForm {
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-top: 1.5rem;
+  border: 2px solid #e9ecef;
+}
+
+.newHoursForm h4 {
+  margin: 0 0 1rem 0;
+  color: #2c3e50;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.formActions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.cancelButton {
+  composes: adminButton;
+  background-color: #6c757d;
+  color: white;
+}
+
+.cancelButton:hover {
+  background-color: #5a6268;
+  transform: translateY(-1px);
+}
+
+/* Modal Styles */
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modalContent {
+  background: white;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.modalHeader h3 {
+  margin: 0;
+  color: #1f2937;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.modalCloseButton {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #6b7280;
+  padding: 0.25rem;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.modalCloseButton:hover {
+  background-color: #f3f4f6;
+  color: #374151;
+}
+
+.modalBody {
+  padding: 1.5rem;
+}
+
+.modalSection {
+  margin-bottom: 2rem;
+}
+
+.modalSection h4 {
+  margin: 0 0 1rem 0;
+  color: #374151;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.modalDescription {
+  color: #6b7280;
+  font-size: 0.9rem;
+  margin: 0 0 1rem 0;
+}
+
+.modalCheckbox {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.modalCheckbox input[type="checkbox"] {
+  width: 1.2rem;
+  height: 1.2rem;
+  cursor: pointer;
+}
+
+.modalTimeInputs {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.modalTimeInputs label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-weight: 500;
+}
+
+.modalTimeInputs input[type="time"] {
+  padding: 0.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 1rem;
+}
+
+.modalBlockedList {
+  margin-bottom: 1rem;
+}
+
+.modalBlockedItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  background-color: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  margin-bottom: 0.5rem;
+}
+
+.modalRemoveButton {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0.25rem;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.modalRemoveButton:hover {
+  background-color: #fee2e2;
+  color: #dc2626;
+}
+
+.modalAddBlocked {
+  margin-top: 1rem;
+}
+
+.modalBlockedInputs {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.modalBlockedInputs input[type="time"] {
+  padding: 0.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+.modalAddButton {
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.modalAddButton:hover {
+  background-color: #2563eb;
+}
+
+.modalTimeSlots {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 0.5rem;
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 0.5rem;
+  background-color: #f9fafb;
+  border-radius: 6px;
+}
+
+.modalTimeSlot {
+  background-color: #10b981;
+  color: white;
+  padding: 0.5rem;
+  border-radius: 4px;
+  text-align: center;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.modalTimeSlot:hover {
+  transform: scale(1.05);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.modalTimeSlotBlocked {
+  background-color: #ef4444;
+}
+
+.modalTimeSlotBlocked:hover {
+  background-color: #dc2626;
+}
+
+.modalFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  padding: 1.5rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.modalCancelButton {
+  background-color: #6b7280;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.modalCancelButton:hover {
+  background-color: #4b5563;
+}
+
+.modalSaveButton {
+  background-color: #10b981;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.modalSaveButton:hover {
+  background-color: #059669;
+}
+
+/* Calendar Layout */
+.calendarLayout {
+  display: flex;
+  gap: 2rem;
+  margin-top: 1rem;
+}
+
+.calendarContainer {
+  flex: 1;
+  max-width: 600px;
+}
+
+.dayDetailsPanel {
+  flex: 1;
+  min-height: 500px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  padding: 1.5rem;
+  border: 1px solid #e9ecef;
+}
+
+.noDaySelected {
+  text-align: center;
+  color: #6c757d;
+  padding: 2rem;
+}
+
+.noDaySelected h4 {
+  margin: 0 0 1rem 0;
+  color: #495057;
+}
+
+.noDaySelected p {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+/* Details Actions */
+.detailsActions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e9ecef;
+}
+
+.setupHoursButton {
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s;
+  flex: 1;
+}
+
+.setupHoursButton:hover {
+  background-color: #2563eb;
+  transform: translateY(-1px);
 }

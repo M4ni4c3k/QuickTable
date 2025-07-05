@@ -11,27 +11,19 @@ import {
 import { useEffect, useState } from 'react';
 import { app } from '../firebase/firebaseConfig';
 import type { FirebaseError } from 'firebase/app';
+import type { AuthHookReturn } from '../types/types';
 
-// Typy dla funkcji auth
-interface AuthActions {
-  login: (email: string, password: string) => Promise<UserCredential>;
-  register: (email: string, password: string) => Promise<UserCredential>;
-  logout: () => Promise<void>;
-}
-
-interface AuthState {
-  user: User | null;
-  loading: boolean;
-  error: FirebaseError | null;
-}
-
-export const useAuth = (): AuthActions & AuthState => {
+/**
+ * Custom hook for managing Firebase authentication state and actions
+ * Provides real-time user state updates and authentication methods
+ */
+export const useAuth = (): AuthHookReturn => {
   const auth = getAuth(app);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<FirebaseError | null>(null);
 
-  // Obserwator stanu uwierzytelnienia
+  // Real-time authentication state observer
   useEffect(() => {
     const unsubscribe: Unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);

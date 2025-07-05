@@ -1,32 +1,106 @@
 .menuPage {
-  max-width: 600px;
-  margin: 2rem auto;
-  padding: 1rem;
-  font-family: Arial, sans-serif;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  background-color: #f8f9fa;
+  min-height: 100vh;
+}
+
+.headerSection {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  background-color: white;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e9ecef;
+}
+
+.headerSection h2 {
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: #2c3e50;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin: 0;
+}
+
+.backButton {
+  background-color: #6c757d;
+  color: white;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  border: none;
+  border-radius: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 8px rgba(108, 117, 125, 0.3);
+  min-width: 140px;
+}
+
+.backButton:hover {
+  background-color: #5a6268;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(108, 117, 125, 0.4);
+}
+
+.backButton:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(108, 117, 125, 0.3);
 }
 
 .menuList {
   list-style: none;
   padding: 0;
   margin: 0;
+  background-color: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  border: 1px solid #e9ecef;
 }
 
 .menuItem {
   display: flex;
   justify-content: space-between;
-  padding: 0.75rem 1rem;
-  border: 1px solid #ccc;
-  margin-bottom: 0.5rem;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  border: none;
+  border-bottom: 1px solid #e9ecef;
+  margin-bottom: 0;
   cursor: pointer;
-  border-radius: 8px;
-  background-color: #fafafa;
-  transition: background-color 0.2s ease;
+  border-radius: 0;
+  background-color: white;
+  transition: all 0.3s ease;
+  font-weight: 500;
+  color: #495057;
+}
+
+.menuItem:last-child {
+  border-bottom: none;
 }
 
 .menuItem:hover,
 .menuItem:focus {
-  background-color: #e6f0ff;
+  background-color: #f8f9fa;
   outline: none;
+  transform: translateX(4px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.name {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.price {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #28a745;
 }
 
 .modalBackdrop {
@@ -35,43 +109,103 @@
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0,0,0,0.4);
+  background: rgba(0,0,0,0.5);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 1rem;
   z-index: 1000;
+  backdrop-filter: blur(4px);
 }
 
 .modal {
   background: white;
   padding: 2rem;
-  border-radius: 12px;
-  max-width: 400px;
+  border-radius: 16px;
+  max-width: 450px;
   width: 100%;
-  box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+  box-shadow: 0 12px 24px rgba(0,0,0,0.3);
+  border: 1px solid #e9ecef;
+  animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .modal h3 {
   margin-top: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #2c3e50;
+  margin-bottom: 1rem;
 }
 
 .modal ul {
   padding-left: 1.2rem;
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
+  color: #495057;
+  line-height: 1.6;
 }
 
 .closeButton {
   background-color: #007bff;
   color: white;
   border: none;
-  padding: 0.5rem 1.2rem;
-  border-radius: 6px;
+  padding: 0.75rem 1.5rem;
+  border-radius: 10px;
   cursor: pointer;
   font-size: 1rem;
-  transition: background-color 0.3s ease;
+  font-weight: 700;
+  transition: all 0.3s ease;
+  box-shadow: 0 3px 6px rgba(0, 123, 255, 0.3);
+  min-width: 120px;
 }
 
 .closeButton:hover {
   background-color: #0056b3;
+  transform: translateY(-2px);
+  box-shadow: 0 5px 10px rgba(0, 123, 255, 0.4);
+}
+
+.closeButton:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0, 123, 255, 0.3);
+}
+
+.closeButton:disabled {
+  background-color: #adb5bd;
+  color: #6c757d;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: 0 2px 4px rgba(173, 181, 189, 0.2);
+  opacity: 0.6;
+}
+
+.closeButton:disabled:hover {
+  background-color: #adb5bd;
+  transform: none;
+  box-shadow: 0 2px 4px rgba(173, 181, 189, 0.2);
+}
+
+.backButton:disabled {
+  background-color: #adb5bd;
+  color: #6c757d;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: 0 2px 4px rgba(173, 181, 189, 0.2);
+  opacity: 0.6;
+}
+
+.backButton:disabled:hover {
+  background-color: #adb5bd;
+  transform: none;
+  box-shadow: 0 2px 4px rgba(173, 181, 189, 0.2);
 }

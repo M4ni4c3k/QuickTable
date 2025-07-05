@@ -8,10 +8,12 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 import { db } from '../../firebase/firebaseConfig';
+import { useNavigate } from 'react-router-dom';
 import type { Table, OrderItem } from '../../types/types';
 import styles from './OrderPage.module.css';
 
 export default function OrderPage() {
+  const navigate = useNavigate();
   const [name, setName] = useState('');
   const [tables, setTables] = useState<Table[]>([]);
   const [selectedTableId, setSelectedTableId] = useState('');
@@ -21,7 +23,7 @@ export default function OrderPage() {
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [orderSaved, setOrderSaved] = useState(false);
 
-  // Fetch available tables
+  // Fetch available tables and filter for free ones
   useEffect(() => {
     const fetchTables = async () => {
       try {
@@ -44,7 +46,7 @@ export default function OrderPage() {
     fetchTables();
   }, []);
 
-  // Fetch menu from Firebase
+  // Fetch menu items for order selection
   useEffect(() => {
     const fetchMenu = async () => {
       try {
@@ -129,7 +131,12 @@ export default function OrderPage() {
 
   return (
     <div className={styles.orderPage}>
-      <h2>Rozpocznij zamówienie</h2>
+      <div className={styles.headerSection}>
+        <h2>Rozpocznij zamówienie</h2>
+        <button className={styles.backButton} onClick={() => navigate('/')}>
+          ⬅ Wróć do strony głównej
+        </button>
+      </div>
 
       {!selectedTable && (
         <form onSubmit={handleSubmit} className={styles.orderForm}>
@@ -168,6 +175,7 @@ export default function OrderPage() {
       {selectedTable && !orderSaved && (
         <div className={styles.menuSection}>
           <h3>Witaj, {name}! Dodaj zamówienie dla stolika {selectedTable.number}</h3>
+          
           {orderItems.map((item, index) => (
             <div key={index} className={styles.orderItem}>
               <select

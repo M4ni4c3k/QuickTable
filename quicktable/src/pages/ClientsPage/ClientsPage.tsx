@@ -15,7 +15,10 @@ export default function ClientsPage() {
   if (view === 'menu') {
     return (
       <main className={styles.mainContent}>
-        <h2>Menu</h2>
+        <div className={styles.features}>
+          <h2>Menu</h2>
+        </div>
+        
         <ul className={styles.menuList}>
           {mockMenu.map((item, index) => (
             <li key={index} className={styles.menuItem}>
@@ -24,6 +27,7 @@ export default function ClientsPage() {
             </li>
           ))}
         </ul>
+        
         <div className={styles.backButtonContainer}>
           <button className={styles.backButton} onClick={() => setView('start')}>
             ⬅ Wróć
@@ -41,11 +45,14 @@ export default function ClientsPage() {
       </section>
 
       <div className={styles.actions}>
-        <button className="btn primary" onClick={() => navigate ('/order')}>
-          Zamów
+        <button className={styles.primaryBtn} onClick={() => navigate ('/order')}>
+          🍽️ Zamów
         </button>
-        <button className="btn secondary" onClick={() => navigate ('/menu')}>
-          Przeglądaj menu
+        <button className={styles.secondaryBtn} onClick={() => navigate ('/menu')}>
+          📋 Przeglądaj menu
+        </button>
+        <button className={styles.tertiaryBtn} onClick={() => navigate ('/reservation')}>
+          📅 Zarezerwuj stolik
         </button>
       </div>
     </main>

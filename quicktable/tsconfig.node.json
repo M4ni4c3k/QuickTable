@@ -1,25 +1,25 @@
 {
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
-    "target": "ES2022",
-    "lib": ["ES2023"],
-    "module": "ESNext",
+    "target": "ES2022", // Target ECMAScript 2022 for Node.js environment
+    "lib": ["ES2023"], // Include ES2023 library for Node.js
+    "module": "ESNext", // Use ES modules
     "skipLibCheck": true,
 
     /* Bundler mode */
-    "moduleResolution": "bundler",
-    "allowImportingTsExtensions": true,
-    "verbatimModuleSyntax": true,
-    "moduleDetection": "force",
-    "noEmit": true,
+    "moduleResolution": "bundler", // Use bundler module resolution
+    "allowImportingTsExtensions": true, // Allow importing .ts files directly
+    "verbatimModuleSyntax": true, // Enforce strict module syntax
+    "moduleDetection": "force", // Force module detection
+    "noEmit": true, // Don't emit files (Vite handles bundling)
 
     /* Linting */
-    "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "erasableSyntaxOnly": true,
-    "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true
+    "strict": true, // Enable all strict type checking options
+    "noUnusedLocals": true, // Error on unused local variables
+    "noUnusedParameters": true, // Error on unused parameters
+    "erasableSyntaxOnly": true, // Only allow syntax that can be erased
+    "noFallthroughCasesInSwitch": true, // Error on fallthrough cases in switch
+    "noUncheckedSideEffectImports": true // Error on unchecked side effect imports
   },
-  "include": ["vite.config.ts"]
+  "include": ["vite.config.ts"] // Include Vite configuration file
 }

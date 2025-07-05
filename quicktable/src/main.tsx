@@ -12,6 +12,7 @@ import AdminPage from './pages/AdminPage/AdminPage.tsx'
 import OrderPage from './pages/OrderPage/OrderPage.tsx'
 import MenuPage from './pages/MenuPage/MenuPage.tsx'
 import KitchenPage from './pages/KitchenPage/KitchenPage.tsx'
+import ReservationPage from './pages/ReservationPage/ReservationPage.tsx'
 
 const router = createBrowserRouter([
   {
@@ -50,6 +51,10 @@ const router = createBrowserRouter([
       {
         path: 'kitchen',
         element: <KitchenPage />
+      },
+      {
+        path: 'reservation',
+        element: <ReservationPage />
       }
     ]
   }

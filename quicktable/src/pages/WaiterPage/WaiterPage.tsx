@@ -20,6 +20,7 @@ export default function WaiterPage() {
   const [selectedTable, setSelectedTable] = useState<Table | null>(null);
   const [modalMode, setModalMode] = useState<'view' | 'add' | null>(null);
   const [menuItems, setMenuItems] = useState<{ name: string; price: number }[]>([]);
+  
   const [newOrder, setNewOrder] = useState<Omit<Order, 'id' | 'timestamp'>>({
     tableId: '',
     items: [],
@@ -31,33 +32,33 @@ export default function WaiterPage() {
   const navigate = useNavigate();
   
   const completeOrder = async (orderId: string, tableId: string) => {
-  await updateDoc(doc(db, 'orders', orderId), {
-    status: 'completed',
-  });
-
-  const pendingOrders = orders.filter(
-    (order) => order.tableId === tableId && order.status === 'pending'
-  );
-
-  if (pendingOrders.length <= 1) {
-    await updateDoc(doc(db, 'tables', tableId), {
-      status: 'free',
+    await updateDoc(doc(db, 'orders', orderId), {
+      status: 'completed',
     });
-  }
-};
 
-  // Pobieranie cen menu
+    const pendingOrders = orders.filter(
+      (order) => order.tableId === tableId && order.status === 'pending'
+    );
+
+    if (pendingOrders.length <= 1) {
+      await updateDoc(doc(db, 'tables', tableId), {
+        status: 'free',
+      });
+    }
+  };
+
+  // Real-time menu items listener
   useEffect(() => {
-  const menuRef = collection(db, 'menu');
-  const unsubscribe = onSnapshot(menuRef, (snapshot) => {
-    const items = snapshot.docs.map(doc => doc.data() as { name: string; price: number });
-    setMenuItems(items);
-  });
+    const menuRef = collection(db, 'menu');
+    const unsubscribe = onSnapshot(menuRef, (snapshot) => {
+      const items = snapshot.docs.map(doc => doc.data() as { name: string; price: number });
+      setMenuItems(items);
+    });
 
-  return () => unsubscribe();
-}, []);
+    return () => unsubscribe();
+  }, []);
 
-  // Pobieranie stolików
+  // Real-time tables listener
   useEffect(() => {
     const tablesRef = collection(db, 'tables');
     const unsubscribe = onSnapshot(tablesRef, (snapshot) => {
@@ -72,7 +73,7 @@ export default function WaiterPage() {
     return () => unsubscribe();
   }, []);
 
-  // Pobieranie zamówień
+  // Real-time orders listener
   useEffect(() => {
     const ordersRef = collection(db, 'orders');
     const unsubscribe = onSnapshot(ordersRef, (snapshot) => {
@@ -87,10 +88,10 @@ export default function WaiterPage() {
   }, []);
 
   const handleTableClick = (table: Table) => {
-  setSelectedTable(table);
-  setShowOrderModal(true);
-  setModalMode(null);
-};
+    setSelectedTable(table);
+    setShowOrderModal(true);
+    setModalMode(null);
+  };
 
   const addOrderToTable = async () => {
     if (!selectedTable) return;
@@ -153,7 +154,6 @@ export default function WaiterPage() {
               <span className={styles.tableStatus}>
                 {table.status === 'free' && 'Wolny'}
                 {table.status === 'occupied' && 'Zajęty'}
-                {table.status === 'reserved' && `Rez. ${table.reservationTime}`}
               </span>
               {table.customerName && (
                 <span className={styles.customerName}>{table.customerName}</span>
@@ -189,185 +189,182 @@ export default function WaiterPage() {
       </button>
 
       {showOrderModal && selectedTable && (
-  <div className={styles.modalOverlay}>
-    <div className={styles.modalContent}>
-      {/* Tryb początkowy - wybór */}
-      {!modalMode && (
-        <>
-          <h3>Stolik {selectedTable.number}</h3>
-          <div className={styles.modalButtons}>
-            <button
-              className={styles.confirmButton}
-              onClick={() => setModalMode('add')}
-            >
-              Złóż zamówienie
-            </button>
-            <button
-              className={styles.confirmButton}
-              onClick={() => setModalMode('view')}
-            >
-              Zobacz zamówienia
-            </button>
-            <button
-              className={styles.cancelButton}
-              onClick={closeModal}
-            >
-              Anuluj
-            </button>
-          </div>
-        </>
-      )}
+        <div className={styles.modalOverlay}>
+          <div className={styles.modalContent}>
+            {!modalMode && (
+              <>
+                <h3>Stolik {selectedTable.number}</h3>
+                <div className={styles.modalButtons}>
+                  <button
+                    className={styles.confirmButton}
+                    onClick={() => setModalMode('add')}
+                  >
+                    Złóż zamówienie
+                  </button>
+                  <button
+                    className={styles.confirmButton}
+                    onClick={() => setModalMode('view')}
+                  >
+                    Zobacz zamówienia
+                  </button>
+                  <button
+                    className={styles.cancelButton}
+                    onClick={closeModal}
+                  >
+                    Anuluj
+                  </button>
+                </div>
+              </>
+            )}
 
-      {/* Tryb podglądu zamówień */}
-      {modalMode === 'view' && (
-       <>
-         <h3>Zamówienia dla stolika {selectedTable.number}</h3>
-         <ul className={styles.orderList}>
-           {orders
-             .filter(order => order.tableId === selectedTable.id && (order.dataState ?? 1) === 1)
-             .map(order => (
-               <li key={order.id} className={styles.singleOrderCard}>
-                 <p>Status: {order.status}</p>
-                 <ul className={styles.orderItemList}>
-                   {order.items.map(item => (
-                     <li key={item.id}>
-                       {item.name} – {item.price} zł
-                     </li>
+            {modalMode === 'view' && (
+             <>
+               <h3>Zamówienia dla stolika {selectedTable.number}</h3>
+               <ul className={styles.orderList}>
+                 {orders
+                   .filter(order => order.tableId === selectedTable.id && (order.dataState ?? 1) === 1)
+                   .map(order => (
+                     <li key={order.id} className={styles.singleOrderCard}>
+                       <p>Status: {order.status}</p>
+                       <ul className={styles.orderItemList}>
+                         {order.items.map(item => (
+                           <li key={item.id}>
+                             {item.name} – {item.price} zł
+                           </li>
+                         ))}
+                       </ul>
+                      </li>
                    ))}
-                 </ul>
-                </li>
-             ))}
-          </ul>
-           
-          <div className={styles.modalButtons}>
-            <button className={styles.cancelButton} onClick={closeModal}>
-              Zamknij
-            </button>
-            <button
-              className={styles.confirmButton}
-              onClick={async () => {
-                const activeOrders = orders.filter(
-                  (order) =>
-                    order.tableId === selectedTable.id &&
-                    (order.dataState ?? 1) === 1
-                );
-              
-                try {
-                  for (const order of activeOrders) {
-                    await updateDoc(doc(db, 'orders', order.id), {
-                      dataState: 2,
-                     status: 'completed'
-                    });
-                  }
-                
-                 await updateDoc(doc(db, 'tables', selectedTable.id), {
-                   status: 'free'
-                 });
-               
-                 closeModal();
-               } catch (error) {
-                 console.error('Błąd przy kończeniu zamówień:', error);
-               }
-             }}
-           >
-             Zakończ wszystkie
-           </button>
-           <div className={styles.orderSummary}>
-             Razem: {
-               orders
-                 .filter(
-                   (order) =>
-                     order.tableId === selectedTable.id &&
-                     (order.dataState ?? 1) === 1
-                  )
-                  .reduce((sum, order) => sum + order.total, 0)
-              } zł
-            </div>
-          </div>
-        </>
-      )}
+                </ul>
+                 
+                <div className={styles.modalButtons}>
+                  <button className={styles.cancelButton} onClick={closeModal}>
+                    Zamknij
+                  </button>
+                  <button
+                    className={styles.confirmButton}
+                    onClick={async () => {
+                      const activeOrders = orders.filter(
+                        (order) =>
+                          order.tableId === selectedTable.id &&
+                          (order.dataState ?? 1) === 1
+                      );
+                    
+                      try {
+                        for (const order of activeOrders) {
+                          await updateDoc(doc(db, 'orders', order.id), {
+                            dataState: 2,
+                           status: 'completed'
+                          });
+                        }
+                      
+                       await updateDoc(doc(db, 'tables', selectedTable.id), {
+                         status: 'free'
+                       });
+                     
+                       closeModal();
+                     } catch (error) {
+                       console.error('Błąd przy kończeniu zamówień:', error);
+                     }
+                   }}
+                 >
+                   Zakończ wszystkie
+                 </button>
+                 <div className={styles.orderSummary}>
+                   Razem: {
+                     orders
+                       .filter(
+                         (order) =>
+                           order.tableId === selectedTable.id &&
+                           (order.dataState ?? 1) === 1
+                        )
+                       .reduce((sum, order) => sum + order.total, 0)
+                   } zł
+                 </div>
+               </div>
+             </>
+           )}
 
-      {/* Tryb składania zamówienia */}
-      {modalMode === 'add' && (
-        <>
-          <h3>Nowe zamówienie dla stolika {selectedTable.number}</h3>
-          <div className={styles.orderForm}>
-            {newOrder.items.map((item, index) => (
-              <div key={item.id} className={styles.orderItem}>
-                <select
-                  className={styles.selectInput}
-                  value={item.name}
-                  onChange={(e) => {
-                    const selectedName = e.target.value;
-                    const menuItem = menuItems.find((m) => m.name === selectedName);
-                    const items = [...newOrder.items];
-                  
-                    if (menuItem) {
-                      items[index].name = menuItem.name;
-                      items[index].price = menuItem.price;                    
-                      const total = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
-                      setNewOrder({ ...newOrder, items, total });
-                    }
-                  }}
-                >
-                  <option value="">-- Wybierz danie --</option>
-                  {menuItems.map((menuItem) => (
-                    <option key={menuItem.name} value={menuItem.name}>
-                      {menuItem.name} – {menuItem.price} zł
-                    </option>
-                  ))}
-                </select>
-                <button
-                  className={styles.removeItemButton}
-                  onClick={() => {
-                    const updatedItems = newOrder.items.filter((_, i) => i !== index);
-                    const total = updatedItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
-                    setNewOrder({ ...newOrder, items: updatedItems, total });
-                  }}
-                >
-                  Usuń
-                </button>
-              </div>
-            ))}
+                       {modalMode === 'add' && (
+             <>
+               <h3>Nowe zamówienie dla stolika {selectedTable.number}</h3>
+               <div className={styles.orderForm}>
+                 {newOrder.items.map((item, index) => (
+                   <div key={item.id} className={styles.orderItem}>
+                     <select
+                       className={styles.selectInput}
+                       value={item.name}
+                       onChange={(e) => {
+                         const selectedName = e.target.value;
+                         const menuItem = menuItems.find((m) => m.name === selectedName);
+                         const items = [...newOrder.items];
+                       
+                         if (menuItem) {
+                           items[index].name = menuItem.name;
+                           items[index].price = menuItem.price;                    
+                           const total = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+                           setNewOrder({ ...newOrder, items, total });
+                         }
+                       }}
+                     >
+                       <option value="">-- Wybierz danie --</option>
+                       {menuItems.map((menuItem) => (
+                         <option key={menuItem.name} value={menuItem.name}>
+                           {menuItem.name} – {menuItem.price} zł
+                         </option>
+                       ))}
+                     </select>
+                     <button
+                       className={styles.removeItemButton}
+                       onClick={() => {
+                         const updatedItems = newOrder.items.filter((_, i) => i !== index);
+                         const total = updatedItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
+                         setNewOrder({ ...newOrder, items: updatedItems, total });
+                       }}
+                     >
+                       Usuń
+                     </button>
+                   </div>
+                 ))}
 
-            <button
-              className={styles.addItemButton}
-              onClick={() =>
-                setNewOrder({
-                  ...newOrder,
-                  items: [
-                    ...newOrder.items,
-                    {
-                      id: Date.now().toString(),
-                      name: '',
-                      price: 0,
-                      quantity: 1
-                    }
-                  ]
-                })
-              }
-            >
-              + Dodaj kolejne danie
-            </button>
-          </div>
+                 <button
+                   className={styles.addItemButton}
+                   onClick={() =>
+                     setNewOrder({
+                       ...newOrder,
+                       items: [
+                         ...newOrder.items,
+                         {
+                           id: Date.now().toString(),
+                           name: '',
+                           price: 0,
+                           quantity: 1
+                         }
+                       ]
+                     })
+                   }
+                 >
+                   + Dodaj kolejne danie
+                 </button>
+               </div>
 
-          <div className={styles.modalButtons}>
-            <button className={styles.cancelButton} onClick={closeModal}>
-              Anuluj
-            </button>
-            <button
-              className={styles.confirmButton}
-              onClick={addOrderToTable}
-              disabled={newOrder.items.length === 0}
-            >
-              Gotowe
-            </button>
-          </div>
-        </>
-      )}
-    </div>
-  </div>
-)}
-    </div>
-  );
-}
+               <div className={styles.modalButtons}>
+                 <button className={styles.cancelButton} onClick={closeModal}>
+                   Anuluj
+                 </button>
+                 <button
+                   className={styles.confirmButton}
+                   onClick={addOrderToTable}
+                   disabled={newOrder.items.length === 0}
+                 >
+                   Gotowe
+                 </button>
+               </div>
+             </>
+           )}
+         </div>
+       </div>
+     )}
+       </div>
+     );
+   }

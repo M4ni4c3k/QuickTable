@@ -18,6 +18,7 @@ export default function KitchenPage() {
   const [loading, setLoading] = useState(true);
   const [showDone, setShowDone] = useState(false);
 
+  // Fetch orders and tables with real-time updates
   const fetchData = async () => {
     try {
       const [ordersSnap, tablesSnap] = await Promise.all([
@@ -49,14 +50,15 @@ export default function KitchenPage() {
     }
   };
 
+  // Set up polling for real-time updates
   useEffect(() => {
     fetchData();
 
     const interval = setInterval(() => {
       fetchData();
-    }, 10000); // odśwież co 10 sek
+    }, 10000); // Refresh every 10 seconds
 
-    return () => clearInterval(interval); // wyczyść interwał przy odmontowaniu
+    return () => clearInterval(interval); // Clean up interval on unmount
   }, [showDone]);
 
   const handleToggleOrderStatus = async (
@@ -77,6 +79,7 @@ export default function KitchenPage() {
     return tables.find(t => t.id === tableId)?.number ?? 'Nieznany';
   };
 
+  // Group orders by table for better organization
   const groupedOrders = orders.reduce((acc: Record<string, Order[]>, order) => {
     const tableNumber = getTableNumber(order.tableId);
     if (!acc[tableNumber]) acc[tableNumber] = [];
@@ -119,6 +122,7 @@ export default function KitchenPage() {
                       </li>
                     ))}
                   </ul>
+                  
                   <label className={styles.checkboxLabel}>
                     <input
                       type="checkbox"

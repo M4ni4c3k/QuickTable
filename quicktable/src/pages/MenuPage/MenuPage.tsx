@@ -1,14 +1,17 @@
 import { useEffect, useState } from 'react';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../../firebase/firebaseConfig';
+import { useNavigate } from 'react-router-dom';
 import styles from './MenuPage.module.css';
 import type { MenuItem } from '../../types/types';
 
 export default function MenuPage() {
+  const navigate = useNavigate();
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
 
+  // Fetch menu items from Firestore
   useEffect(() => {
     const fetchMenu = async () => {
       try {
@@ -32,7 +35,12 @@ export default function MenuPage() {
 
   return (
     <div className={styles.menuPage}>
-      <h2>Nasze Menu</h2>
+      <div className={styles.headerSection}>
+        <h2>Nasze Menu</h2>
+        <button className={styles.backButton} onClick={() => navigate('/')}>
+          ⬅ Wróć do strony głównej
+        </button>
+      </div>
 
       <ul className={styles.menuList}>
         {menuItems.map(item => (
