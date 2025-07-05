@@ -15,16 +15,16 @@ export default function Header() {
 
       <div className={styles.actions}>
         <button className="btn primary" onClick={() => navigate('/waiter')}>
-          Panel kelnera
+          Kelner
         </button>
         <button className="btn secondary" onClick={() => navigate('/client')}>
-          Panel gościa
+          Gość
         </button>
         <button className="btn secondary" onClick={() => navigate('/admin')}>
-          Panel admina
+          Admin
         </button>
         <button className="btn secondary" onClick={() => navigate('/kitchen')}>
-          Panel kuchni
+          Kuchnia
         </button>
         <button className="btn third" onClick={() => navigate('/')}>
           Powrót
