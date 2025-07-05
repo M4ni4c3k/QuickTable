@@ -40,10 +40,20 @@
 }
 
 .bigButton {
-  composes: adminButton;
+  font-size: 1.1rem;
+  font-weight: 700;
+  padding: 0.75rem 1.5rem;
+  border-radius: 10px;
+  min-width: 140px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background-color: #007bff;
   color: white;
-  box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
   min-height: 80px;
 }
 
@@ -92,10 +102,20 @@
 }
 
 .addItemButton {
-  composes: adminButton;
+  font-size: 1.1rem;
+  font-weight: 700;
+  padding: 0.75rem 1.5rem;
+  border-radius: 10px;
+  min-width: 140px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background-color: #28a745;
   color: white;
-  box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
   max-width: 250px;
   margin: 2rem auto 0 auto;
   width: 100%;
@@ -118,7 +138,18 @@
 }
 
 .backButton {
-  composes: adminButton;
+  font-size: 1.1rem;
+  font-weight: 700;
+  padding: 0.75rem 1.5rem;
+  border-radius: 10px;
+  min-width: 140px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background-color: #6c757d;
   color: white;
 }
@@ -207,10 +238,20 @@
 }
 
 .deleteButton {
-  composes: adminButton;
+  font-size: 1.1rem;
+  font-weight: 700;
+  padding: 0.75rem 1.5rem;
+  border-radius: 10px;
+  min-width: 140px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(220, 53, 69, 0.3);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background-color: #dc3545;
   color: white;
-  box-shadow: 0 2px 4px rgba(220, 53, 69, 0.3);
 }
 
 .deleteButton:hover {
@@ -225,14 +266,23 @@
 }
 
 .addIngredientButton {
-  composes: adminButton;
+  font-size: 1.1rem;
+  font-weight: 700;
+  padding: 0.75rem 1.5rem;
+  border-radius: 10px;
+  min-width: 140px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 3px 6px rgba(0, 123, 255, 0.3);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background-color: #007bff;
   color: white;
-  box-shadow: 0 3px 6px rgba(0, 123, 255, 0.3);
   max-width: 200px;
   margin-top: 1rem;
   width: 100%;
-  font-size: 1.1rem;
 }
 
 .addIngredientButton:hover {
@@ -255,10 +305,20 @@
 }
 
 .saveButton {
-  composes: adminButton;
+  font-size: 1.1rem;
+  font-weight: 700;
+  padding: 0.75rem 1.5rem;
+  border-radius: 10px;
+  min-width: 140px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 3px 6px rgba(40, 167, 69, 0.3);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background-color: #28a745;
   color: white;
-  box-shadow: 0 3px 6px rgba(40, 167, 69, 0.3);
 }
 
 .saveButton:hover {
@@ -497,7 +557,18 @@
 }
 
 .acceptButton {
-  composes: adminButton;
+  font-size: 1.1rem;
+  font-weight: 700;
+  padding: 0.75rem 1.5rem;
+  border-radius: 10px;
+  min-width: 140px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: #28a745;
   color: white;
 }
@@ -507,7 +578,18 @@
 }
 
 .rejectButton {
-  composes: adminButton;
+  font-size: 1.1rem;
+  font-weight: 700;
+  padding: 0.75rem 1.5rem;
+  border-radius: 10px;
+  min-width: 140px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: #dc3545;
   color: white;
 }
@@ -517,7 +599,18 @@
 }
 
 .archiveButton {
-  composes: adminButton;
+  font-size: 1.1rem;
+  font-weight: 700;
+  padding: 0.75rem 1.5rem;
+  border-radius: 10px;
+  min-width: 140px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: #6c757d;
   color: white;
 }
@@ -658,7 +751,18 @@
 }
 
 .toggleButton {
-  composes: adminButton;
+  font-size: 1.1rem;
+  font-weight: 700;
+  padding: 0.75rem 1.5rem;
+  border-radius: 10px;
+  min-width: 140px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background-color: #6c757d;
   color: white;
 }
@@ -703,12 +807,20 @@
 }
 
 .monthNavButton {
-  composes: adminButton;
+  font-size: 1.1rem;
+  font-weight: 700;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  min-width: 60px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 123, 255, 0.3);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background-color: #007bff;
   color: white;
-  min-width: 60px;
-  font-size: 1.1rem;
-  padding: 0.75rem 1rem;
 }
 
 .monthNavButton:hover {
@@ -1144,7 +1256,18 @@
 }
 
 .cancelButton {
-  composes: adminButton;
+  font-size: 1.1rem;
+  font-weight: 700;
+  padding: 0.75rem 1.5rem;
+  border-radius: 10px;
+  min-width: 140px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background-color: #6c757d;
   color: white;
 }

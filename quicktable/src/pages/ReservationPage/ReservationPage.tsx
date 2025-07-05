@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, getDocs, updateDoc, doc, query, where, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../firebase/firebaseConfig';
 import { useNavigate } from 'react-router-dom';
 import styles from './ReservationPage.module.css';
@@ -14,7 +14,7 @@ export default function ReservationPage() {
   const [selectedTime, setSelectedTime] = useState('');
   const [guests, setGuests] = useState(2);
   const [tables, setTables] = useState<Table[]>([]);
-  const [availableTables, setAvailableTables] = useState<Table[]>([]);
+
   const [selectedTable, setSelectedTable] = useState<Table | null>(null);
   const [loading, setLoading] = useState(true);
   const [reservationSaved, setReservationSaved] = useState(false);
@@ -54,10 +54,7 @@ export default function ReservationPage() {
     return slots;
   };
 
-  const getDayOfWeek = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.getDay();
-  };
+
 
   const updateAvailableTimeSlots = (selectedDate: string) => {
     if (!selectedDate) return;
@@ -120,13 +117,7 @@ export default function ReservationPage() {
     return [];
   };
 
-  const isTimeSlotBlockedByHours = (timeSlot: string) => {
-    const blockedHours = getBlockedHoursInfo(selectedDate);
-    return blockedHours.some(blockedRange => {
-      const [start, end] = blockedRange.split('-');
-      return timeSlot >= start && timeSlot < end;
-    });
-  };
+
 
   const hasPendingConflict = (timeSlot: string) => {
     const selectedDateTime = new Date(`${selectedDate}T${timeSlot}`);
@@ -210,44 +201,40 @@ export default function ReservationPage() {
 
     try {
       // Check for existing reservations in the reservations collection
-      const reservationsSnapshot = await getDocs(collection(db, 'reservations'));
-      const existingReservations = reservationsSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as Reservation[];
+      // const reservationsSnapshot = await getDocs(collection(db, 'reservations'));
 
       // Calculate time range (selected time + 2 hours)
-      const selectedDateTime = new Date(`${selectedDate}T${selectedTime}`);
-      const endDateTime = new Date(selectedDateTime.getTime() + (2 * 60 * 60 * 1000)); // +2 hours
+      // const selectedDateTime = new Date(`${selectedDate}T${selectedTime}`);
+      // const endDateTime = new Date(selectedDateTime.getTime() + (2 * 60 * 60 * 1000)); // +2 hours
 
       // Filter out tables that have conflicting reservations
-      const availableTables = tables.filter(table => {
-        // Check if this table has any active reservations that conflict
-        const conflictingReservation = existingReservations.find(reservation => 
-          reservation.tableId === table.id && 
-          reservation.dataState === 1 && // Only check active reservations
-          reservation.status !== 'rejected' && // Ignore rejected reservations
-          reservation.status !== 'cancelled' && // Ignore cancelled reservations
-          reservation.reservationDate === selectedDate
-        );
+      // const filteredTables = tables.filter(table => {
+      //   // Check if this table has any active reservations that conflict
+      //   const conflictingReservation = existingReservations.find(reservation => 
+      //     reservation.tableId === table.id && 
+      //     reservation.dataState === 1 && // Only check active reservations
+      //     reservation.status !== 'rejected' && // Ignore rejected reservations
+      //     reservation.status !== 'cancelled' && // Ignore cancelled reservations
+      //     reservation.reservationDate === selectedDate
+      //   );
+      //
+      //   if (!conflictingReservation) return true;
+      //
+      //   // Check if the reservation time conflicts with our 2-hour window
+      //   const reservationDateTime = new Date(`${conflictingReservation.reservationDate}T${conflictingReservation.reservationHour}`);
+      //   const reservationEndTime = new Date(reservationDateTime.getTime() + (2 * 60 * 60 * 1000));
+      //
+      //   // Check for overlap
+      //   const hasConflict = (
+      //     (selectedDateTime >= reservationDateTime && selectedDateTime < reservationEndTime) ||
+      //     (endDateTime > reservationDateTime && endDateTime <= reservationEndTime) ||
+      //     (selectedDateTime <= reservationDateTime && endDateTime >= reservationEndTime)
+      //   );
+      //
+      //   return !hasConflict;
+      // });
 
-        if (!conflictingReservation) return true;
-
-        // Check if the reservation time conflicts with our 2-hour window
-        const reservationDateTime = new Date(`${conflictingReservation.reservationDate}T${conflictingReservation.reservationHour}`);
-        const reservationEndTime = new Date(reservationDateTime.getTime() + (2 * 60 * 60 * 1000));
-
-        // Check for overlap
-        const hasConflict = (
-          (selectedDateTime >= reservationDateTime && selectedDateTime < reservationEndTime) ||
-          (endDateTime > reservationDateTime && endDateTime <= reservationEndTime) ||
-          (selectedDateTime <= reservationDateTime && endDateTime >= reservationEndTime)
-        );
-
-        return !hasConflict;
-      });
-
-      setAvailableTables(availableTables);
+      
     } catch (error) {
       console.error('Błąd podczas sprawdzania dostępności:', error);
       setError('Nie udało się sprawdzić dostępności stolików');

@@ -6,17 +6,13 @@ import {
   updateDoc,
   deleteDoc,
   doc,
-  query,
-  where,
-  orderBy,
 } from 'firebase/firestore';
 import { db } from '../../firebase/firebaseConfig';
 import styles from './AdminPage.module.css';
-import type { MenuItem, Table, Reservation, RestaurantHours } from '../../types/types';  
+import type { MenuItem, Reservation, RestaurantHours } from '../../types/types';  
 
 export default function AdminPage() {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
-  const [tables, setTables] = useState<Table[]>([]);
   const [selectedMenuItem, setSelectedMenuItem] = useState<MenuItem | null>(null);
   const [addingNewMenuItem, setAddingNewMenuItem] = useState(false);
   const [newMenuItem, setNewMenuItem] = useState<MenuItem>({
@@ -29,11 +25,8 @@ export default function AdminPage() {
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [restaurantHours, setRestaurantHours] = useState<RestaurantHours[]>([]);
-  const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
   const [showArchivedReservations, setShowArchivedReservations] = useState(false);
-  const [calendarView, setCalendarView] = useState<'calendar' | 'hours'>('calendar');
   const [selectedDayForHours, setSelectedDayForHours] = useState<RestaurantHours | null>(null);
-  const [newBlockedRange, setNewBlockedRange] = useState({ start: '', end: '' });
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [showHoursModal, setShowHoursModal] = useState(false);
   const [modalHoursForm, setModalHoursForm] = useState({
@@ -43,22 +36,16 @@ export default function AdminPage() {
   });
   const [selectedDateForModal, setSelectedDateForModal] = useState<Date | null>(null);
   const [modalBlockedRanges, setModalBlockedRanges] = useState<{ start: string; end: string }[]>([]);
-  const [newModalBlockedRange, setNewModalBlockedRange] = useState({ start: '', end: '' });
+
 
   useEffect(() => {
     const fetchData = async () => {
       const menuSnapshot = await getDocs(collection(db, 'menu'));
-      const tableSnapshot = await getDocs(collection(db, 'tables'));
       const reservationsSnapshot = await getDocs(collection(db, 'reservations'));
       const hoursSnapshot = await getDocs(collection(db, 'restaurantHours'));
 
       setMenuItems(menuSnapshot.docs.map(doc => ({
         ...(doc.data() as Omit<MenuItem, 'id'>),
-        id: doc.id,
-      })));
-
-      setTables(tableSnapshot.docs.map(doc => ({
-        ...(doc.data() as Omit<Table, 'id'>),
         id: doc.id,
       })));
 
@@ -124,7 +111,6 @@ export default function AdminPage() {
     setReservations(reservations.map(res => 
       res.id === reservationId ? { ...res, status, isAccepted } : res
     ));
-    setSelectedReservation(null);
   };
 
   const checkReservationConflicts = async (reservation: Reservation) => {
@@ -194,8 +180,6 @@ export default function AdminPage() {
       if (!dayHours) return;
 
       const date = dayHours.date;
-      const newOpenTime = updatedHours.openTime || dayHours.openTime;
-      const newCloseTime = updatedHours.closeTime || dayHours.closeTime;
       const newTimeSlots = updatedHours.timeSlots || dayHours.timeSlots;
       const newBlockedHours = updatedHours.blockedHours || dayHours.blockedHours || [];
 
@@ -286,7 +270,7 @@ export default function AdminPage() {
     
     // Handle overnight hours (e.g., 11:00 to 01:00)
     const isOvernight = closeHour < openHour;
-    const maxHour = isOvernight ? 24 : closeHour;
+    
     
     while (
       (isOvernight && currentHour < 24) || 
@@ -374,17 +358,7 @@ export default function AdminPage() {
     };
   };
 
-  const handleCreateHoursForDate = (date: Date) => {
-    setSelectedDateForModal(date);
-    setModalHoursForm({
-      isOpen: true,
-      openTime: '10:00',
-      closeTime: '22:00',
-    });
-    setModalBlockedRanges([]);
-    setNewModalBlockedRange({ start: '', end: '' });
-    setShowHoursModal(true);
-  };
+
 
   const handleSaveModalHours = async () => {
     if (!selectedDateForModal) return;
@@ -406,16 +380,7 @@ export default function AdminPage() {
     setSelectedDateForModal(null);
   };
 
-  const addModalBlockedRange = () => {
-    if (newModalBlockedRange.start && newModalBlockedRange.end) {
-      setModalBlockedRanges([...modalBlockedRanges, newModalBlockedRange]);
-      setNewModalBlockedRange({ start: '', end: '' });
-    }
-  };
 
-  const removeModalBlockedRange = (index: number) => {
-    setModalBlockedRanges(modalBlockedRanges.filter((_, i) => i !== index));
-  };
 
   const toggleTimeSlot = (time: string) => {
     const isBlocked = modalBlockedRanges.some(range => 
@@ -472,45 +437,9 @@ export default function AdminPage() {
     setCurrentMonth(newMonth);
   };
 
-  const isTimeInBlockedRange = (time: string, blockedHours: string[]) => {
-    return blockedHours.some(blockedRange => {
-      const [start, end] = blockedRange.split('-');
-      return time >= start && time < end;
-    });
-  };
 
-  const addBlockedHours = (dayId: string, startTime: string, endTime: string) => {
-    if (!startTime || !endTime || startTime >= endTime) {
-      alert('Nieprawidłowy zakres godzin. Godzina rozpoczęcia musi być wcześniejsza niż zakończenia.');
-      return;
-    }
 
-    const dayHours = restaurantHours.find(h => h.id === dayId);
-    if (!dayHours) return;
 
-    const newBlockedRange = `${startTime}-${endTime}`;
-    const updatedBlockedHours = [...(dayHours.blockedHours || []), newBlockedRange];
-    
-    handleHoursUpdate(dayId, { blockedHours: updatedBlockedHours });
-    setNewBlockedRange({ start: '', end: '' });
-  };
-
-  const removeBlockedHours = (dayId: string, blockedRange: string) => {
-    const dayHours = restaurantHours.find(h => h.id === dayId);
-    if (!dayHours) return;
-
-    const updatedBlockedHours = (dayHours.blockedHours || []).filter(range => range !== blockedRange);
-    handleHoursUpdate(dayId, { blockedHours: updatedBlockedHours });
-  };
-
-  const getAvailableTimeSlots = (dayHours: RestaurantHours) => {
-    if (!dayHours.isOpen) return [];
-    
-    const allSlots = generateTimeSlots(dayHours.openTime, dayHours.closeTime);
-    const blockedHours = dayHours.blockedHours || [];
-    
-    return allSlots.filter(slot => !isTimeInBlockedRange(slot, blockedHours));
-  };
 
   if (!view) {
     return (

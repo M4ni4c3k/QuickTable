@@ -31,21 +31,7 @@ export default function WaiterPage() {
 
   const navigate = useNavigate();
   
-  const completeOrder = async (orderId: string, tableId: string) => {
-    await updateDoc(doc(db, 'orders', orderId), {
-      status: 'completed',
-    });
 
-    const pendingOrders = orders.filter(
-      (order) => order.tableId === tableId && order.status === 'pending'
-    );
-
-    if (pendingOrders.length <= 1) {
-      await updateDoc(doc(db, 'tables', tableId), {
-        status: 'free',
-      });
-    }
-  };
 
   // Real-time menu items listener
   useEffect(() => {
@@ -97,11 +83,7 @@ export default function WaiterPage() {
     if (!selectedTable) return;
 
     try {
-      const orderWithMetadata = {
-        ...newOrder,
-        timestamp: Timestamp.now(),
-        total: 0
-      };
+
 
       await addDoc(collection(db, 'orders'), {
         ...newOrder,
