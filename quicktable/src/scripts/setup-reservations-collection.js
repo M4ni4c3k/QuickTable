@@ -75,4 +75,7 @@ console.log('1. Create collection "reservations"');
 console.log('2. Add documents with the above structure');
 console.log('3. Use the admin interface to manage reservations');
 console.log('4. Active reservations (dataState: 1) will be shown by default');
-console.log('5. Archived reservations (dataState: 2) can be viewed with toggle'); 
+console.log('5. Archived reservations (dataState: 2) can be viewed with toggle');
+
+// This script only provides documentation and structure examples
+// No database operations needed for this setup script 

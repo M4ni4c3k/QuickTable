@@ -1,26 +1,24 @@
-const { initializeApp } = require('firebase/app');
-const { getFirestore, collection, getDocs, updateDoc, doc } = require('firebase/firestore');
+import { initializeApp, cert } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 
-// Firebase configuration
-const firebaseConfig = {
-  apiKey: "AIzaSyBXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-  authDomain: "quicktable-XXXXX.firebaseapp.com",
-  projectId: "quicktable-XXXXX",
-  storageBucket: "quicktable-XXXXX.appspot.com",
-  messagingSenderId: "XXXXXXXXXXXX",
-  appId: "1:XXXXXXXXXXXX:web:XXXXXXXXXXXXXXXXXXXXXXXX"
-};
+const serviceAccountPath = join(process.cwd(), 'serviceAccountKey.json');
+const serviceAccount = JSON.parse(readFileSync(serviceAccountPath, 'utf8'));
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+initializeApp({
+  credential: cert(serviceAccount),
+  projectId: serviceAccount.project_id
+});
+
+const db = getFirestore();
 
 async function updateRestaurantHoursWithBlockedHours() {
   try {
     console.log('🔄 Rozpoczynam aktualizację godzin restauracji...');
     
     // Get all restaurant hours
-    const hoursSnapshot = await getDocs(collection(db, 'restaurantHours'));
+    const hoursSnapshot = await db.collection('restaurantHours').get();
     
     if (hoursSnapshot.empty) {
       console.log('ℹ️ Brak godzin restauracji do aktualizacji');
@@ -37,7 +35,7 @@ async function updateRestaurantHoursWithBlockedHours() {
         console.log(`📝 Aktualizuję godziny dla ${hourData.dayName || `dzień ${hourData.dayOfWeek}`}...`);
         
         // Add blockedHours field with empty array
-        await updateDoc(doc(db, 'restaurantHours', hourDoc.id), {
+        await db.collection('restaurantHours').doc(hourDoc.id).update({
           blockedHours: []
         });
         

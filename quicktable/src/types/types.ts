@@ -24,6 +24,8 @@ export interface Order {
   status: 'pending' | 'completed' | 'done';
   waiterName?: string;
   dataState?: number; // 1 = active, 2 = archived
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 /**
@@ -44,6 +46,8 @@ export interface MenuItem {
   name: string;
   price: number;
   ingredients: string[];
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 /**
@@ -84,6 +88,8 @@ export interface RestaurantHours {
   closeTime: string;
   timeSlots: string[];
   blockedHours: string[]; // Time ranges that are blocked for reservations
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 // Firebase Authentication Types

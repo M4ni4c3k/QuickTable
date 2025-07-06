@@ -6,6 +6,8 @@
   color: white;
   padding: 1rem;
   align-items: center;
+  position: relative;
+  z-index: 1000;
 }
 
 .logo {

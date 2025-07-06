@@ -1,85 +1,138 @@
 .waiterContainer {
-  padding: 2rem;
-  max-width: 1200px;
-  margin: 0 auto;
+  width: 100%;
+  margin: 0;
+  padding: 0 1rem 1rem 1rem;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  background-color: #f8f9fa;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.headerRow {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+  color: white;
+  padding: 1rem 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.appName {
+  font-size: 2.2rem;
+  font-weight: 700;
+  font-family: 'Segoe UI', 'Arial', sans-serif;
+  color: white;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  justify-self: start;
+  grid-column: 1;
 }
 
 .pageTitle {
   text-align: center;
-  margin-bottom: 2rem;
-  color: var(--dark);
+  margin-bottom: 0;
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: white;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  flex-shrink: 0;
+  grid-column: 2;
 }
 
-.tablesGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 1.5rem;
-  margin-bottom: 2rem;
+.gearButton {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  font-size: 1.8rem;
+  cursor: pointer;
+  padding: 0.75rem;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+  color: white;
+  justify-self: end;
+  backdrop-filter: blur(10px);
 }
 
-.table {
-  border-radius: 8px;
-  padding: 1rem;
+.gearButton:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.4);
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.selectionPanel {
   display: flex;
   flex-direction: column;
+  gap: 1.5rem;
+  max-width: 400px;
+  margin: 0 auto;
+  flex-shrink: 0;
+}
+
+.bigButton {
+  font-size: 1.1rem;
+  font-weight: 700;
+  padding: 0.75rem 1.5rem;
+  border-radius: 10px;
+  min-width: 140px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 120px;
-  cursor: pointer;
-  transition: transform 0.2s;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.table:hover {
-  transform: scale(1.03);
-}
-
-.table-free {
-  background-color: #2ecc71;
+  background-color: #007bff;
   color: white;
+  min-height: 80px;
 }
 
-.table-occupied {
-  background-color: #e74c3c;
-  color: white;
+.bigButton:hover {
+  background-color: #0056b3;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 123, 255, 0.4);
 }
 
-
-
-.tableNumber {
-  font-weight: bold;
-  font-size: 1.2rem;
-  margin-bottom: 0.5rem;
+.bigButton:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0, 123, 255, 0.3);
 }
 
-.tableStatus {
-  font-size: 0.9rem;
-  margin-bottom: 0.3rem;
-}
-
-.customerName {
-  font-size: 0.8rem;
-  font-style: italic;
-}
-
-.orderCount {
-  background: white;
-  padding: 0.2rem 0.5rem;
-  border-radius: 12px;
-  font-size: 0.8rem;
-  margin-top: 0.3rem;
+.backButtonContainer {
+  margin-top: 1rem;
+  text-align: center;
+  flex-shrink: 0;
 }
 
 .backButton {
-  display: block;
-  margin: 0 auto;
-  padding: 0.8rem 1.5rem;
-  background: var(--primary);
-  color: white;
+  font-size: 1.1rem;
+  font-weight: 700;
+  padding: 0.75rem 1.5rem;
+  border-radius: 10px;
+  min-width: 140px;
   border: none;
-  border-radius: 4px;
   cursor: pointer;
-  font-weight: bold;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #6c757d;
+  color: white;
+}
+
+.backButton:hover {
+  background-color: #5a6268;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(108, 117, 125, 0.4);
+}
+
+.backButton:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(108, 117, 125, 0.3);
 }
 
 .loading {
@@ -88,156 +141,636 @@
   font-size: 1.2rem;
 }
 
+/* Tables Layout */
+.tablesLayout {
+  display: grid;
+  grid-template-columns: 1fr 4fr;
+  gap: 1.5rem;
+  margin-bottom: 1rem;
+  width: 100%;
+  flex: 1;
+}
+
+.tablesGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 0.75rem;
+  overflow-y: auto;
+  padding-right: 0.5rem;
+  max-width: 300px;
+}
+
+.table {
+  border-radius: 8px;
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  position: relative;
+}
+
+.table:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.table.selectedTable {
+  transform: scale(1.02);
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+  border: 2px solid #007bff;
+  z-index: 10;
+}
+
+.table-free {
+  background-color: #28a745;
+  color: white;
+}
+
+.table-occupied {
+  background-color: #dc3545;
+  color: white;
+}
+
+.tableNumber {
+  font-weight: bold;
+  font-size: 0.9rem;
+  margin-bottom: 0.2rem;
+}
+
+.tableStatus {
+  font-size: 0.7rem;
+  margin-bottom: 0.2rem;
+  font-weight: 600;
+}
+
+.customerName {
+  font-size: 0.6rem;
+  font-style: italic;
+  margin-bottom: 0.2rem;
+  text-align: center;
+}
+
+.orderCount {
+  background: rgba(255, 255, 255, 0.9);
+  color: #333;
+  padding: 0.15rem 0.4rem;
+  border-radius: 10px;
+  font-size: 0.6rem;
+  font-weight: 600;
+  margin-top: 0.2rem;
+}
+
+/* Table Details Panel */
+.tableDetailsPanel {
+  background-color: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  overflow-y: auto;
+  min-width: 500px;
+  max-width: none;
+}
+
+.tableDetails h4 {
+  margin: 0 0 1.5rem 0;
+  color: #2c3e50;
+  font-size: 1.4rem;
+  font-weight: 600;
+}
+
+.tableInfo {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #e9ecef;
+}
+
+.tableInfo p {
+  margin: 0.5rem 0;
+  color: #495057;
+}
+
+.tableInfo strong {
+  color: #2c3e50;
+}
+
+.ordersSection {
+  margin-bottom: 1.5rem;
+}
+
+.ordersSection h5 {
+  margin: 0 0 1rem 0;
+  color: #2c3e50;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.orderCard {
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  border-left: 4px solid #007bff;
+}
+
+.orderHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.orderStatus {
+  background-color: #007bff;
+  color: white;
+  padding: 0.2rem 0.6rem;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.orderTotal {
+  font-weight: bold;
+  color: #28a745;
+  font-size: 1.1rem;
+}
+
+.orderItems {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.orderItems li {
+  padding: 0.2rem 0;
+  color: #495057;
+  font-size: 0.9rem;
+}
+
+.noOrders {
+  text-align: center;
+  color: #6c757d;
+  font-style: italic;
+  padding: 1rem;
+}
+
+.tableActions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.addOrderButton,
+.completeButton,
+.closeButton {
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all 0.3s ease;
+}
+
+.addOrderButton {
+  background-color: #28a745;
+  color: white;
+}
+
+.addOrderButton:hover {
+  background-color: #1e7e34;
+  transform: translateY(-1px);
+}
+
+.completeButton {
+  background-color: #007bff;
+  color: white;
+}
+
+.completeButton:hover {
+  background-color: #0056b3;
+  transform: translateY(-1px);
+}
+
+.closeButton {
+  background-color: #6c757d;
+  color: white;
+}
+
+.closeButton:hover {
+  background-color: #5a6268;
+  transform: translateY(-1px);
+}
+
+.noTableSelected {
+  text-align: center;
+  padding: 2rem;
+  color: #6c757d;
+}
+
+.noTableSelected h4 {
+  margin: 0 0 1rem 0;
+  color: #2c3e50;
+}
+
+/* Upcoming Reservations */
+.upcomingReservations {
+  background-color: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  margin-bottom: 1rem;
+  flex-shrink: 0;
+}
+
+.upcomingReservations h3 {
+  margin: 0 0 1.5rem 0;
+  color: #2c3e50;
+  font-size: 1.3rem;
+  font-weight: 600;
+}
+
+.reservationsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem;
+}
+
+.reservationCard {
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  padding: 1rem;
+  border-left: 4px solid #007bff;
+}
+
+.reservationHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.reservationHeader h4 {
+  margin: 0;
+  color: #2c3e50;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.statusInfo {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.statusBadge {
+  padding: 0.2rem 0.6rem;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.statusBadge.pending {
+  background-color: #ffc107;
+  color: #212529;
+}
+
+.statusBadge.accepted {
+  background-color: #28a745;
+  color: white;
+}
+
+.statusBadge.rejected {
+  background-color: #dc3545;
+  color: white;
+}
+
+.statusBadge.cancelled {
+  background-color: #6c757d;
+  color: white;
+}
+
+.reservationDetails {
+  color: #495057;
+}
+
+.reservationDetails p {
+  margin: 0.3rem 0;
+  font-size: 0.9rem;
+}
+
+.reservationDetails strong {
+  color: #2c3e50;
+}
+
+/* Calendar Layout */
+.calendarLayout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  margin-bottom: 2rem;
+  flex: 1;
+}
+
+.calendarContainer {
+  background-color: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  overflow-y: auto;
+}
+
+.calendarHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.calendarHeader h3 {
+  margin: 0;
+  color: #2c3e50;
+  font-size: 1.3rem;
+  font-weight: 600;
+}
+
+.monthNavButton {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+}
+
+.monthNavButton:hover {
+  background-color: #f8f9fa;
+  transform: scale(1.1);
+}
+
+.calendarGrid {
+  display: flex;
+  flex-direction: column;
+}
+
+.calendarWeekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.weekdayHeader {
+  text-align: center;
+  font-weight: 600;
+  color: #6c757d;
+  padding: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.calendarDays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.5rem;
+}
+
+.calendarDay {
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background-color: #f8f9fa;
+  border: 2px solid transparent;
+  position: relative;
+}
+
+.calendarDay:hover {
+  background-color: #e9ecef;
+  transform: scale(1.05);
+}
+
+.calendarDay.today {
+  background-color: #007bff;
+  color: white;
+  font-weight: bold;
+}
+
+.calendarDay.pastDay {
+  background-color: #e9ecef;
+  color: #6c757d;
+  cursor: not-allowed;
+}
+
+.calendarDay.pastDay:hover {
+  background-color: #e9ecef;
+  transform: none;
+}
+
+.calendarDay.selectedDay {
+  background-color: #28a745;
+  color: white;
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(40, 167, 69, 0.4);
+}
+
+.dayNumber {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.reservationCount {
+  position: absolute;
+  top: 0.25rem;
+  right: 0.25rem;
+}
+
+.countBadge {
+  background-color: #dc3545;
+  color: white;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: bold;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.calendarDay.selectedDay .countBadge {
+  background-color: white;
+  color: #28a745;
+}
+
+.calendarDay.today.selectedDay {
+  background-color: #28a745;
+  color: white;
+  font-weight: bold;
+}
+
+.emptyDay {
+  aspect-ratio: 1;
+}
+
+/* Reservations Panel */
+.reservationsPanel {
+  background-color: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  overflow-y: auto;
+}
+
+.dateSelector {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #e9ecef;
+}
+
+.dateSelector h3 {
+  margin: 0 0 1rem 0;
+  color: #2c3e50;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.archiveToggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: #495057;
+  cursor: pointer;
+}
+
+.archiveToggle input[type="checkbox"] {
+  margin: 0;
+}
+
+.reservationsList {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.noReservations {
+  text-align: center;
+  color: #6c757d;
+  font-style: italic;
+  padding: 2rem;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .tablesLayout,
+  .calendarLayout {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .tablesGrid {
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    max-width: none;
+  }
+  
+  .tableDetailsPanel {
+    min-width: auto;
+  }
+  
+  .reservationsGrid {
+    grid-template-columns: 1fr;
+  }
+  
+  .waiterContainer {
+    padding: 0.5rem;
+  }
+  
+  .pageTitle {
+    font-size: 1.4rem;
+    margin-bottom: 1rem;
+  }
+}
+
+/* View Modal Styles */
 .modalOverlay {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0,0,0,0.5);
+  background: rgba(0, 0, 0, 0.5);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 1000;
 }
 
-.modalContent {
+.modal {
   background: white;
   padding: 2rem;
   border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  max-width: 400px;
   width: 90%;
-  max-width: 600px;
-  max-height: 90vh;
-  overflow-y: auto;
 }
 
-.orderForm {
-  margin: 1.5rem 0;
-}
-
-.orderItem {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  background: #fff;
-  padding: 0.5rem;
-  border-radius: 6px;
-  border: 1px solid #ddd;
-  margin-bottom: 0.5rem;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
-}
-
-.orderItemList {
-  padding: 0;
-  margin: 0;
-  list-style: none;
-}
-
-.orderItemList li {
-  padding: 0.2rem 0;
-}
-
-.addItemButton {
-  margin-top: 0.5rem;
-  background-color: #f0f0f0;
-  border: 1px solid #007bff;
-  color: #007bff;
-  padding: 5px 10px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: bold;
-  transition: background-color 0.2s ease;
-}
-
-.addItemButton:hover,
-.removeItemButton:hover {
-  background-color: #e0e0e0;
-}
-
-.removeItemButton {
-  height: 40px;
-  padding: 0 1rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid #dc3545;
-  border-radius: 6px;
-  color: #dc3545;
-  border-color: #dc3545;
+.modal h3 {
+  margin: 0 0 1rem 0;
+  text-align: center;
+  color: #2c3e50;
+  font-size: 1.5rem;
+  font-weight: 600;
 }
 
 .modalButtons {
   display: flex;
-  justify-content: space-between;
-  margin-top: 1rem;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-
-.cancelButton,
-.confirmButton {
-  padding: 0.6rem 1rem;
-  border-radius: 8px;
-  font-size: 1rem;
-  cursor: pointer;
-  border: none;
-  font-weight: bold;
-}
-
-.cancelButton {
-  background-color: #f8d7da;
-  color: #721c24;
-}
-
-.confirmButton {
-  background-color: #d4edda;
-  color: #155724;
-}
-
-.orderList {
-  list-style: none;
-  padding: 0;
-  margin-top: 1rem;
-  max-height: 300px;
-  overflow-y: auto;
-  border: 1px solid #ccc;
-  border-radius: 10px;
-  padding: 1rem;
-  background-color: #fafafa;
-}
-
-.selectInput {
-  padding: 0.5rem;
-  font-size: 0.95rem;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  width: 100%;
-  min-width: 200px;
-  box-sizing: border-box;
-  height: 40px;
-}
-
-.orderSummary {
-  margin-left: 16px;
-  font-weight: bold;
-  font-size: 16px;
-  align-self: center;
-}
-
-.singleOrderCard {
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  padding: 1rem;
-  margin-bottom: 1rem;
-  background-color: #fff;
-  display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
 }
-.finishButtonWrapper {
-  display: flex;
-  justify-content: flex-end;
+
+.modalButtons button {
+  padding: 0.75rem 1rem;
+  border: 2px solid #007bff;
+  background: white;
+  color: #007bff;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 1rem;
+  transition: all 0.3s;
 }
-.orderCount {
-  color: black !important;
+
+.modalButtons button:hover {
+  background: #007bff;
+  color: white;
+  transform: translateY(-1px);
+}
+
+.closeButton {
+  width: 100%;
+  padding: 0.75rem;
+  border: none;
+  background: #6c757d;
+  color: white;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 1rem;
+  transition: all 0.3s;
+}
+
+.closeButton:hover {
+  background: #5a6268;
+  transform: translateY(-1px);
 }

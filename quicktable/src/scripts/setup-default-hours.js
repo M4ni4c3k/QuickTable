@@ -9,22 +9,20 @@
  * These hours can be configured through the admin interface after initial setup.
  */
 
-const { initializeApp } = require('firebase/app');
-const { getFirestore, collection, getDocs, addDoc, updateDoc, doc } = require('firebase/firestore');
+import { initializeApp, cert } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 
-// Firebase configuration
-const firebaseConfig = {
-  apiKey: "AIzaSyBXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-  authDomain: "quicktable-XXXXX.firebaseapp.com",
-  projectId: "quicktable-XXXXX",
-  storageBucket: "quicktable-XXXXX.appspot.com",
-  messagingSenderId: "XXXXXXXXXXXX",
-  appId: "1:XXXXXXXXXXXX:web:XXXXXXXXXXXXXXXXXXXXXXXX"
-};
+const serviceAccountPath = join(process.cwd(), 'serviceAccountKey.json');
+const serviceAccount = JSON.parse(readFileSync(serviceAccountPath, 'utf8'));
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+initializeApp({
+  credential: cert(serviceAccount),
+  projectId: serviceAccount.project_id
+});
+
+const db = getFirestore();
 
 // Default hours for each day of the week
 const defaultHours = [
@@ -46,8 +44,12 @@ function generateTimeSlots(openTime, closeTime) {
   let currentHour = openHour;
   let currentMinute = openMinute;
   
+  // Handle overnight hours (e.g., 11:00 to 01:00)
+  const isOvernight = closeHour < openHour;
+  
   while (
-    currentHour < closeHour || 
+    (isOvernight && currentHour < 24) || 
+    (!isOvernight && currentHour < closeHour) || 
     (currentHour === closeHour && currentMinute < closeMinute)
   ) {
     slots.push(`${currentHour.toString().padStart(2, '0')}:${currentMinute.toString().padStart(2, '0')}`);
@@ -56,6 +58,11 @@ function generateTimeSlots(openTime, closeTime) {
     if (currentMinute >= 60) {
       currentHour += 1;
       currentMinute = 0;
+    }
+    
+    // Stop at closing time for overnight hours
+    if (isOvernight && currentHour === closeHour && currentMinute >= closeMinute) {
+      break;
     }
   }
   
@@ -67,7 +74,7 @@ async function setupDefaultHours() {
     console.log('🔄 Rozpoczynam ustawianie domyślnych godzin restauracji...');
     
     // Get existing hours
-    const hoursSnapshot = await getDocs(collection(db, 'restaurantHours'));
+    const hoursSnapshot = await db.collection('restaurantHours').get();
     const existingHours = hoursSnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data(),
@@ -96,7 +103,7 @@ async function setupDefaultHours() {
         
         if (needsUpdate) {
           console.log(`📝 Aktualizuję godziny dla ${defaultHour.dayName}...`);
-          await updateDoc(doc(db, 'restaurantHours', existingHour.id), updates);
+          await db.collection('restaurantHours').doc(existingHour.id).update(updates);
           updatedCount++;
           console.log(`✅ Zaktualizowano: ${defaultHour.dayName}`);
         } else {
@@ -107,7 +114,7 @@ async function setupDefaultHours() {
         console.log(`📝 Tworzę godziny dla ${defaultHour.dayName}...`);
         const timeSlots = generateTimeSlots(defaultHour.openTime, defaultHour.closeTime);
         
-        await addDoc(collection(db, 'restaurantHours'), {
+        await db.collection('restaurantHours').add({
           ...defaultHour,
           timeSlots,
           blockedHours: [],

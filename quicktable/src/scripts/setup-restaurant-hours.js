@@ -10,6 +10,21 @@
  * - Basic schedule suitable for most restaurants
  */
 
+import { initializeApp, cert } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
+import { readFileSync } from 'fs';
+import { join } from 'path';
+
+const serviceAccountPath = join(process.cwd(), 'serviceAccountKey.json');
+const serviceAccount = JSON.parse(readFileSync(serviceAccountPath, 'utf8'));
+
+initializeApp({
+  credential: cert(serviceAccount),
+  projectId: serviceAccount.project_id
+});
+
+const db = getFirestore();
+
 /**
  * Default restaurant hours configuration
  * Each day includes dayOfWeek (0=Sunday, 1=Monday, etc.), dayName, and time slots
@@ -75,14 +90,56 @@ const defaultHours = [
 ];
 
 /**
- * Output the configuration and setup instructions
- * Provides JSON data and step-by-step Firebase setup guide
+ * Setup function to create restaurant hours in database
  */
-console.log('Default restaurant hours configuration:');
-console.log(JSON.stringify(defaultHours, null, 2));
-console.log('\nTo set up these hours in Firebase:');
-console.log('1. Go to your Firebase Console');
-console.log('2. Navigate to Firestore Database');
-console.log('3. Create a collection called "restaurantHours"');
-console.log('4. Add documents with the above data');
-console.log('5. Or use the admin interface in your app to configure hours'); 
+async function setupRestaurantHours() {
+  try {
+    console.log('🔄 Rozpoczynam ustawianie godzin restauracji...');
+    
+    // Get existing hours to avoid duplicates
+    const existingSnapshot = await db.collection('restaurantHours').get();
+    const existingHours = existingSnapshot.docs.map(doc => doc.data());
+    
+    let createdCount = 0;
+    let skippedCount = 0;
+    
+    for (const hourConfig of defaultHours) {
+      // Check if this day already exists
+      const existing = existingHours.find(h => h.dayOfWeek === hourConfig.dayOfWeek);
+      
+      if (existing) {
+        console.log(`ℹ️ Pomijam ${hourConfig.dayName} - już istnieje`);
+        skippedCount++;
+        continue;
+      }
+      
+      // Create new hours document
+      console.log(`📝 Tworzę godziny dla ${hourConfig.dayName}...`);
+      await db.collection('restaurantHours').add({
+        ...hourConfig,
+        createdAt: new Date()
+      });
+      
+      createdCount++;
+      console.log(`✅ Utworzono: ${hourConfig.dayName}`);
+    }
+    
+    console.log(`\n🎉 Konfiguracja zakończona!`);
+    console.log(`📊 Utworzono: ${createdCount} rekordów`);
+    console.log(`⏭️ Pominięto: ${skippedCount} rekordów (już istnieją)`);
+    
+  } catch (error) {
+    console.error('❌ Błąd podczas konfiguracji:', error);
+  }
+}
+
+// Run the setup
+setupRestaurantHours()
+  .then(() => {
+    console.log('✅ Skrypt zakończony pomyślnie');
+    process.exit(0);
+  })
+  .catch((error) => {
+    console.error('❌ Błąd w skrypcie:', error);
+    process.exit(1);
+  }); 

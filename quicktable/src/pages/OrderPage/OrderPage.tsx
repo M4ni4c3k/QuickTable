@@ -4,13 +4,12 @@ import {
   doc,
   getDocs,
   updateDoc,
-  addDoc,
-  serverTimestamp,
 } from 'firebase/firestore';
 import { db } from '../../firebase/firebaseConfig';
 import { useNavigate } from 'react-router-dom';
 import type { Table, OrderItem } from '../../types/types';
 import styles from './OrderPage.module.css';
+import { createOrder } from '../../utils/databaseUtils';
 
 export default function OrderPage() {
   const navigate = useNavigate();
@@ -111,11 +110,10 @@ export default function OrderPage() {
     const total = orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
     try {
-      await addDoc(collection(db, 'orders'), {
+      await createOrder({
         tableId: selectedTableId,
         items: orderItems,
         total,
-        timestamp: serverTimestamp(),
         status: 'pending',
         waiterName: '',
         dataState: 1,

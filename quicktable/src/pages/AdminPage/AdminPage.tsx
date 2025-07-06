@@ -2,14 +2,21 @@ import { useState, useEffect } from 'react';
 import {
   collection,
   getDocs,
-  addDoc,
   updateDoc,
-  deleteDoc,
   doc,
+  writeBatch,
 } from 'firebase/firestore';
 import { db } from '../../firebase/firebaseConfig';
 import styles from './AdminPage.module.css';
-import type { MenuItem, Reservation, RestaurantHours } from '../../types/types';  
+import type { MenuItem, Reservation, RestaurantHours } from '../../types/types';
+import { 
+  createMenuItem, 
+  createRestaurantHours, 
+  updateDocument, 
+  deleteDocument,
+  getDocuments 
+} from '../../utils/databaseUtils';
+  
 
 export default function AdminPage() {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
@@ -28,14 +35,8 @@ export default function AdminPage() {
   const [showArchivedReservations, setShowArchivedReservations] = useState(false);
   const [selectedDayForHours, setSelectedDayForHours] = useState<RestaurantHours | null>(null);
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [showHoursModal, setShowHoursModal] = useState(false);
-  const [modalHoursForm, setModalHoursForm] = useState({
-    isOpen: true,
-    openTime: '10:00',
-    closeTime: '22:00',
-  });
-  const [selectedDateForModal, setSelectedDateForModal] = useState<Date | null>(null);
-  const [modalBlockedRanges, setModalBlockedRanges] = useState<{ start: string; end: string }[]>([]);
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [showChangeViewModal, setShowChangeViewModal] = useState(false);
 
 
   useEffect(() => {
@@ -70,18 +71,18 @@ export default function AdminPage() {
 
   const handleAddMenuItem = async () => {
     if (!newMenuItem.name || newMenuItem.price <= 0) return;
-    const newDoc = await addDoc(collection(db, 'menu'), {
+    const createdItem = await createMenuItem({
       name: newMenuItem.name,
       price: newMenuItem.price,
       ingredients: newMenuItem.ingredients,
     });
-    setMenuItems([...menuItems, { ...newMenuItem, id: newDoc.id }]);
+    setMenuItems([...menuItems, createdItem]);
     setNewMenuItem({ id: '', name: '', price: 0, ingredients: [''] });
     setAddingNewMenuItem(false);
   };
 
   const handleDeleteMenuItem = async (id: string) => {
-    await deleteDoc(doc(db, 'menu', id));
+    await deleteDocument('menu', id);
     setMenuItems(menuItems.filter(item => item.id !== id));
     setSelectedMenuItem(null);
   };
@@ -149,11 +150,34 @@ export default function AdminPage() {
 
   const handleArchiveReservation = async (reservationId: string) => {
     await updateDoc(doc(db, 'reservations', reservationId), { 
-      dataState: 2 // Archive the reservation
+      dataState: 0 // Archive the reservation
     });
     setReservations(reservations.map(res => 
-      res.id === reservationId ? { ...res, dataState: 2 } : res
+      res.id === reservationId ? { ...res, dataState: 0 } : res
     ));
+  };
+
+  const handleDeleteAllReservationsForDate = async (date: string) => {
+    try {
+      const dayReservations = getReservationsForDate(date, false);
+      const batch = writeBatch(db);
+      
+      dayReservations.forEach(reservation => {
+        const reservationRef = doc(db, 'reservations', reservation.id);
+        batch.update(reservationRef, { dataState: 0 });
+      });
+      
+      await batch.commit();
+      
+      // Refresh data
+      const reservationsSnapshot = await getDocs(collection(db, 'reservations'));
+      setReservations(reservationsSnapshot.docs.map(doc => ({
+        ...(doc.data() as Omit<Reservation, 'id'>),
+        id: doc.id,
+      })));
+    } catch (error) {
+      console.error('Error deleting all reservations for date:', error);
+    }
   };
 
   const handleHoursUpdate = async (dayId: string, updatedHours: Partial<RestaurantHours>) => {
@@ -164,8 +188,8 @@ export default function AdminPage() {
       ));
     } else {
       // Create new day hours if it doesn't exist
-      const newDoc = await addDoc(collection(db, 'restaurantHours'), updatedHours);
-      setRestaurantHours([...restaurantHours, { ...updatedHours, id: newDoc.id } as RestaurantHours]);
+      const createdHours = await createRestaurantHours(updatedHours as Omit<RestaurantHours, 'id'>);
+      setRestaurantHours([...restaurantHours, createdHours]);
     }
 
     // Update existing reservations for this date if hours changed
@@ -254,10 +278,16 @@ export default function AdminPage() {
   };
 
   const getReservationsForDate = (date: string, showArchived: boolean = false) => {
-    return reservations.filter(res => 
-      res.reservationDate === date && 
-      (showArchived ? res.dataState === 2 : res.dataState === 1)
+    return reservations.filter(r => 
+      r.reservationDate === date && 
+      (showArchived ? r.dataState === 0 : r.dataState === 1)
     );
+  };
+
+  const getReservationCountForDate = (date: string) => {
+    return reservations.filter(r => 
+      r.reservationDate === date && r.dataState === 1
+    ).length;
   };
 
   const generateTimeSlots = (openTime: string, closeTime: string) => {
@@ -324,7 +354,10 @@ export default function AdminPage() {
   };
 
   const formatDate = (date: Date) => {
-    return date.toISOString().split('T')[0];
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   };
 
   const getDayHours = (date: Date) => {
@@ -360,46 +393,7 @@ export default function AdminPage() {
 
 
 
-  const handleSaveModalHours = async () => {
-    if (!selectedDateForModal) return;
-    
-    const blockedHoursStrings = modalBlockedRanges.map(range => `${range.start}-${range.end}`);
-    
-    const newHours = {
-      date: formatDate(selectedDateForModal),
-      dayName: getDayName(selectedDateForModal),
-      isOpen: modalHoursForm.isOpen,
-      openTime: modalHoursForm.openTime,
-      closeTime: modalHoursForm.closeTime,
-      timeSlots: generateTimeSlots(modalHoursForm.openTime, modalHoursForm.closeTime),
-      blockedHours: blockedHoursStrings,
-    };
-    
-    await handleHoursUpdate('', newHours);
-    setShowHoursModal(false);
-    setSelectedDateForModal(null);
-  };
 
-
-
-  const toggleTimeSlot = (time: string) => {
-    const isBlocked = modalBlockedRanges.some(range => 
-      time >= range.start && time < range.end
-    );
-
-    if (isBlocked) {
-      setModalBlockedRanges(modalBlockedRanges.filter(range => 
-        !(time >= range.start && time < range.end)
-      ));
-    } else {
-      const [hours, minutes] = time.split(':').map(Number);
-      const nextTime = new Date();
-      nextTime.setHours(hours, minutes + 30, 0, 0);
-      const nextTimeString = nextTime.getHours().toString().padStart(2, '0') + ':' + 
-                           nextTime.getMinutes().toString().padStart(2, '0');
-      setModalBlockedRanges([...modalBlockedRanges, { start: time, end: nextTimeString }]);
-    }
-  };
 
   const toggleTimeSlotInDetails = (time: string) => {
     if (!selectedDayForHours) return;
@@ -414,6 +408,12 @@ export default function AdminPage() {
         const [start, end] = range.split('-');
         return !(time >= start && time < end);
       });
+      
+      // Update local state immediately for UI responsiveness
+      const updatedDay = { ...selectedDayForHours, blockedHours: updatedBlockedHours };
+      setSelectedDayForHours(updatedDay);
+      
+      // Update database
       handleHoursUpdate(selectedDayForHours.id, { blockedHours: updatedBlockedHours });
     } else {
       const [hours, minutes] = time.split(':').map(Number);
@@ -423,6 +423,12 @@ export default function AdminPage() {
                            nextTime.getMinutes().toString().padStart(2, '0');
       const newBlockedRange = `${time}-${nextTimeString}`;
       const updatedBlockedHours = [...(selectedDayForHours.blockedHours || []), newBlockedRange];
+      
+      // Update local state immediately for UI responsiveness
+      const updatedDay = { ...selectedDayForHours, blockedHours: updatedBlockedHours };
+      setSelectedDayForHours(updatedDay);
+      
+      // Update database
       handleHoursUpdate(selectedDayForHours.id, { blockedHours: updatedBlockedHours });
     }
   };
@@ -444,13 +450,70 @@ export default function AdminPage() {
   if (!view) {
     return (
       <div className={styles.adminContainer}>
-        <h2 className={styles.pageTitle}>Wybierz opcję</h2>
+        <div className={styles.headerRow}>
+          <div className={styles.appName}>Quick Table</div>
+          <h2 className={styles.pageTitle}>Wybierz opcję</h2>
+          <button 
+            className={styles.gearButton} 
+            onClick={() => setShowViewModal(true)}
+            title="Ustawienia"
+          >
+            ⚙️
+          </button>
+        </div>
         <div className={styles.selectionPanel}>
           <button className={styles.bigButton} onClick={() => setView('menu')}>🍽️ Edycja Menu</button>
           <button className={styles.bigButton} onClick={() => setView('tables')}>🪑 Zarządzanie Stolikami</button>
           <button className={styles.bigButton} onClick={() => setView('reservations')}>📅 Zarządzanie Rezerwacjami</button>
           <button className={styles.bigButton} onClick={() => setView('hours')}>🕐 Godziny Otwarcia</button>
         </div>
+        
+        {showViewModal && (
+          <div className={styles.modalOverlay} onClick={() => setShowViewModal(false)}>
+            <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+              <h3>Ustawienia</h3>
+              <div className={styles.modalButtons}>
+                <button onClick={() => setShowChangeViewModal(true)}>
+                  Zmień widok
+                </button>
+              </div>
+              <button className={styles.closeButton} onClick={() => setShowViewModal(false)}>
+                Zamknij
+              </button>
+            </div>
+          </div>
+        )}
+        
+        {showChangeViewModal && (
+          <div className={styles.modalOverlay} onClick={() => setShowChangeViewModal(false)}>
+            <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+              <h3>Zmień widok</h3>
+              <div className={styles.modalButtons}>
+                <button onClick={() => { setShowChangeViewModal(false); setShowViewModal(false); window.location.href = '/client'; }}>
+                  Strona Klienta
+                </button>
+                <button onClick={() => { setShowChangeViewModal(false); setShowViewModal(false); window.location.href = '/menu'; }}>
+                  Menu
+                </button>
+                <button onClick={() => { setShowChangeViewModal(false); setShowViewModal(false); window.location.href = '/order'; }}>
+                  Zamówienia
+                </button>
+                <button onClick={() => { setShowChangeViewModal(false); setShowViewModal(false); window.location.href = '/reservation'; }}>
+                  Rezerwacje
+                </button>
+                <button onClick={() => { setShowChangeViewModal(false); setShowViewModal(false); window.location.href = '/kitchen'; }}>
+                  Kuchnia
+                </button>
+                <button onClick={() => { setShowChangeViewModal(false); setShowViewModal(false); window.location.href = '/waiter'; }}>
+                  Kelner
+                </button>
+              </div>
+              <button className={styles.closeButton} onClick={() => setShowChangeViewModal(false)}>
+                Wróć
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -459,7 +522,11 @@ export default function AdminPage() {
     if (!selectedMenuItem && !addingNewMenuItem) {
       return (
         <div className={styles.adminContainer}>
-          <h2 className={styles.pageTitle}>Menu - lista dań</h2>
+          <div className={styles.sectionHeaderRow}>
+            <div className={styles.sectionAppName}>Quick Table</div>
+            <h2 className={styles.sectionTitle}>Menu - lista dań</h2>
+            <div></div>
+          </div>
           <ul className={styles.menuList}>
             {menuItems.map(item => (
               <li
@@ -485,7 +552,11 @@ export default function AdminPage() {
     if (selectedMenuItem) {
       return (
         <div className={styles.adminContainer}>
-          <h2 className={styles.pageTitle}>Edycja dania</h2>
+          <div className={styles.sectionHeaderRow}>
+            <div className={styles.sectionAppName}>Quick Table</div>
+            <h2 className={styles.sectionTitle}>Edycja dania</h2>
+            <div></div>
+          </div>
           <div className={styles.itemRow}>
             <label>Nazwa:</label>
             <input
@@ -564,7 +635,11 @@ export default function AdminPage() {
     if (addingNewMenuItem) {
       return (
         <div className={styles.adminContainer}>
-          <h2 className={styles.pageTitle}>Dodaj nowe danie</h2>
+          <div className={styles.sectionHeaderRow}>
+            <div className={styles.sectionAppName}>Quick Table</div>
+            <h2 className={styles.sectionTitle}>Dodaj nowe danie</h2>
+            <div></div>
+          </div>
           <div className={styles.itemRow}>
             <label>Nazwa:</label>
             <input
@@ -633,7 +708,11 @@ export default function AdminPage() {
   if (view === 'tables') {
     return (
       <div className={styles.adminContainer}>
-        <h2 className={styles.pageTitle}>Zarządzanie Stolikami</h2>
+        <div className={styles.sectionHeaderRow}>
+          <div className={styles.sectionAppName}>Quick Table</div>
+          <h2 className={styles.sectionTitle}>Zarządzanie Stolikami</h2>
+          <div></div>
+        </div>
         <div className={styles.backButtonContainer}>
           <button className={styles.backButton} onClick={() => setView(null)}>⬅ Wróć</button>
         </div>
@@ -646,94 +725,196 @@ export default function AdminPage() {
     
     return (
       <div className={styles.adminContainer}>
-        <h2 className={styles.pageTitle}>Zarządzanie Rezerwacjami</h2>
-        
-        <div className={styles.dateSelector}>
-          <label>
-            Wybierz datę:
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              min={new Date().toISOString().split('T')[0]}
-            />
-          </label>
-          <label className={styles.archiveToggle}>
-            <input
-              type="checkbox"
-              checked={showArchivedReservations}
-              onChange={(e) => setShowArchivedReservations(e.target.checked)}
-            />
-            Pokaż zarchiwizowane rezerwacje
-          </label>
+        <div className={styles.sectionHeaderRow}>
+          <div className={styles.sectionAppName}>Quick Table</div>
+          <h2 className={styles.sectionTitle}>Zarządzanie Rezerwacjami</h2>
+          <div></div>
         </div>
-
-        <div className={styles.reservationsList}>
-          <h3>
-            {showArchivedReservations ? 'Zarchiwizowane' : 'Aktywne'} rezerwacje na {selectedDate}
-          </h3>
-          {dayReservations.length === 0 ? (
-            <p className={styles.noReservations}>
-              {showArchivedReservations ? 'Brak zarchiwizowanych rezerwacji' : 'Brak aktywnych rezerwacji'} na wybraną datę
-            </p>
-          ) : (
-            dayReservations.map(reservation => (
-              <div key={reservation.id} className={styles.reservationCard}>
-                <div className={styles.reservationHeader}>
-                  <h4>Stolik {reservation.tableNumber} - {reservation.reservationHour}</h4>
-                  <div className={styles.statusInfo}>
-                    <span className={`${styles.statusBadge} ${styles[reservation.status]}`}>
-                      {reservation.status === 'pending' && 'Oczekująca'}
-                      {reservation.status === 'accepted' && 'Zaakceptowana'}
-                      {reservation.status === 'rejected' && 'Odrzucona'}
-                      {reservation.status === 'cancelled' && 'Anulowana'}
-                    </span>
-                    <span className={styles.dataStateBadge}>
-                      {reservation.dataState === 1 ? 'Aktywna' : 'Zarchiwizowana'}
-                    </span>
-                  </div>
-                </div>
-                {reservation.status === 'pending' && (
-                  <div className={styles.pendingNote}>
-                    <p>⚠️ Rezerwacja oczekująca - może kolidować z innymi rezerwacjami</p>
-                  </div>
-                )}
-                <div className={styles.reservationDetails}>
-                  <p><strong>Klient:</strong> {reservation.customerName}</p>
-                  <p><strong>Email:</strong> {reservation.customerEmail}</p>
-                  <p><strong>Telefon:</strong> {reservation.customerPhone}</p>
-                  <p><strong>Liczba gości:</strong> {reservation.guests}</p>
-                  <p><strong>Status:</strong> {reservation.isAccepted ? '✅ Zaakceptowana' : '❌ Nie zaakceptowana'}</p>
-                </div>
-                {reservation.status === 'pending' && reservation.dataState === 1 && (
-                  <div className={styles.reservationActions}>
-                    <button
-                      className={styles.acceptButton}
-                      onClick={() => handleReservationStatusUpdate(reservation.id, 'accepted')}
-                    >
-                      ✅ Zaakceptuj
-                    </button>
-                    <button
-                      className={styles.rejectButton}
-                      onClick={() => handleReservationStatusUpdate(reservation.id, 'rejected')}
-                    >
-                      ❌ Odrzuć
-                    </button>
-                  </div>
-                )}
-                {reservation.dataState === 1 && reservation.status !== 'pending' && (
-                  <div className={styles.reservationActions}>
-                    <button
-                      className={styles.archiveButton}
-                      onClick={() => handleArchiveReservation(reservation.id)}
-                    >
-                      📁 Zarchiwizuj
-                    </button>
-                  </div>
-                )}
+        
+        <div className={styles.calendarLayout}>
+          <div className={styles.calendarContainer}>
+            <div className={styles.calendarHeader}>
+              <button 
+                className={styles.monthNavButton}
+                onClick={() => navigateMonth('prev')}
+              >
+                ⬅️
+              </button>
+              <h3>{currentMonth.toLocaleDateString('pl-PL', { month: 'long', year: 'numeric' })}</h3>
+              <button 
+                className={styles.monthNavButton}
+                onClick={() => navigateMonth('next')}
+              >
+                ➡️
+              </button>
+            </div>
+            
+            <div className={styles.calendarGrid}>
+              <div className={styles.calendarWeekdays}>
+                {['Ndz', 'Pon', 'Wt', 'Śr', 'Czw', 'Pt', 'Sob'].map(day => (
+                  <div key={day} className={styles.weekdayHeader}>{day}</div>
+                ))}
               </div>
-            ))
-          )}
+              
+              <div className={styles.calendarDays}>
+                {getCurrentMonthDays().map((date, index) => {
+                  if (!date) {
+                    return <div key={index} className={styles.emptyDay}></div>;
+                  }
+                  
+                  const dateString = formatDate(date);
+                  const reservationCount = getReservationCountForDate(dateString);
+                  const isToday = date.toDateString() === new Date().toDateString();
+                  const isPast = date.getTime() < new Date().setHours(0, 0, 0, 0);
+                  const isSelected = dateString === selectedDate;
+                  
+                  const dayReservations = getReservationsForDate(dateString, false);
+                  const briefReservations = dayReservations.slice(0, 3); // Show only first 3 reservations
+                  
+                  return (
+                    <div 
+                      key={index} 
+                      className={`${styles.calendarDay} ${isToday ? styles.today : ''} ${isPast ? styles.pastDay : ''} ${isSelected ? styles.selectedDay : ''}`}
+                      onClick={() => setSelectedDate(dateString)}
+                      onMouseEnter={(e) => {
+                        if (reservationCount > 0) {
+                          e.currentTarget.setAttribute('data-tooltip', 'true');
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.removeAttribute('data-tooltip');
+                      }}
+                    >
+                      <div className={styles.dayNumber}>{date.getDate()}</div>
+                      {reservationCount > 0 && (
+                        <div className={styles.reservationCount}>
+                          <span className={styles.countBadge}>{reservationCount}</span>
+                        </div>
+                      )}
+                      {reservationCount > 0 && (
+                        <div className={styles.hoverTooltip}>
+                          <div className={styles.tooltipHeader}>
+                            <strong>{dateString}</strong>
+                            <span className={styles.tooltipCount}>{reservationCount} rezerwacji</span>
+                          </div>
+                          <div className={styles.tooltipReservations}>
+                                                         {briefReservations.map((reservation, idx) => (
+                               <div key={idx} className={styles.tooltipReservation}>
+                                 <span className={styles.tooltipTime}>{reservation.reservationHour}</span>
+                                 <span className={styles.tooltipTable}>Stolik {reservation.tableNumber}</span>
+                               </div>
+                             ))}
+                            {dayReservations.length > 3 && (
+                              <div className={styles.tooltipMore}>
+                                +{dayReservations.length - 3} więcej...
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          <div className={styles.reservationsPanel}>
+            <div className={styles.dateSelector}>
+              <label className={styles.archiveToggle}>
+                <input
+                  type="checkbox"
+                  checked={showArchivedReservations}
+                  onChange={(e) => setShowArchivedReservations(e.target.checked)}
+                />
+                Pokaż zarchiwizowane rezerwacje
+              </label>
+            </div>
+
+            <div className={styles.reservationsList}>
+              {dayReservations.length === 0 ? (
+                <p className={styles.noReservations}>
+                  {showArchivedReservations ? 'Brak zarchiwizowanych rezerwacji' : 'Brak aktywnych rezerwacji'} na wybraną datę
+                </p>
+              ) : (
+                <>
+                  <div className={styles.reservationsHeader}>
+                    <h4>
+                      {showArchivedReservations ? 'Zarchiwizowane' : 'Aktywne'} rezerwacje ({dayReservations.length})
+                    </h4>
+                                         {!showArchivedReservations && dayReservations.length > 0 && (
+                       <button 
+                         className={styles.deleteAllButton}
+                         onClick={() => {
+                           if (window.confirm('Czy na pewno chcesz usunąć wszystkie rezerwacje na ten dzień?')) {
+                             handleDeleteAllReservationsForDate(selectedDate);
+                           }
+                         }}
+                       >
+                         🗑️ Usuń wszystkie
+                       </button>
+                     )}
+                  </div>
+                  {dayReservations.map(reservation => (
+                    <div key={reservation.id} className={styles.reservationCard}>
+                      <div className={styles.reservationHeader}>
+                        <h4>Stolik {reservation.tableNumber} - {reservation.reservationHour}</h4>
+                        <div className={styles.statusInfo}>
+                          <span className={`${styles.statusBadge} ${styles[reservation.status]}`}>
+                            {reservation.status === 'pending' && 'Oczekująca'}
+                            {reservation.status === 'accepted' && 'Zaakceptowana'}
+                            {reservation.status === 'rejected' && 'Odrzucona'}
+                            {reservation.status === 'cancelled' && 'Anulowana'}
+                          </span>
+                          <span className={styles.dataStateBadge}>
+                            {reservation.dataState === 1 ? 'Aktywna' : 'Zarchiwizowana'}
+                          </span>
+                        </div>
+                      </div>
+                      {reservation.status === 'pending' && (
+                        <div className={styles.pendingNote}>
+                          <p>⚠️ Rezerwacja oczekująca - może kolidować z innymi rezerwacjami</p>
+                        </div>
+                      )}
+                      <div className={styles.reservationDetails}>
+                        <p><strong>Klient:</strong> {reservation.customerName}</p>
+                        <p><strong>Email:</strong> {reservation.customerEmail}</p>
+                        <p><strong>Telefon:</strong> {reservation.customerPhone}</p>
+                        <p><strong>Liczba gości:</strong> {reservation.guests}</p>
+                        <p><strong>Status:</strong> {reservation.isAccepted ? '✅ Zaakceptowana' : '❌ Nie zaakceptowana'}</p>
+                      </div>
+                      {reservation.status === 'pending' && reservation.dataState === 1 && (
+                        <div className={styles.reservationActions}>
+                          <button
+                            className={styles.acceptButton}
+                            onClick={() => handleReservationStatusUpdate(reservation.id, 'accepted')}
+                          >
+                            ✅ Zaakceptuj
+                          </button>
+                          <button
+                            className={styles.rejectButton}
+                            onClick={() => handleReservationStatusUpdate(reservation.id, 'rejected')}
+                          >
+                            ❌ Odrzuć
+                          </button>
+                        </div>
+                      )}
+                      {reservation.dataState === 1 && reservation.status !== 'pending' && (
+                        <div className={styles.reservationActions}>
+                          <button
+                            className={styles.archiveButton}
+                            onClick={() => handleArchiveReservation(reservation.id)}
+                          >
+                            📁 Zarchiwizuj
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </>
+              )}
+            </div>
+          </div>
         </div>
 
         <div className={styles.backButtonContainer}>
@@ -746,7 +927,11 @@ export default function AdminPage() {
   if (view === 'hours') {
     return (
       <div className={styles.adminContainer}>
-        <h2 className={styles.pageTitle}>Godziny Otwarcia</h2>
+        <div className={styles.sectionHeaderRow}>
+          <div className={styles.sectionAppName}>Quick Table</div>
+          <h2 className={styles.sectionTitle}>Godziny Otwarcia</h2>
+          <div></div>
+        </div>
         
         <div className={styles.calendarLayout}>
           <div className={styles.calendarContainer}>
@@ -782,19 +967,20 @@ export default function AdminPage() {
                   const dayHours = getDayHours(date);
                   const isToday = date.toDateString() === new Date().toDateString();
                   const isPast = date.getTime() < new Date().setHours(0, 0, 0, 0);
+                  const isSelected = selectedDayForHours && selectedDayForHours.date === formatDate(date);
                   
                   return (
                     <div 
                       key={index} 
-                      className={`${styles.calendarDay} ${isToday ? styles.today : ''} ${isPast ? styles.pastDay : ''}`}
-                                              onClick={() => {
-                          if (dayHours) {
-                            setSelectedDayForHours(dayHours);
-                          } else {
-                            const defaultHours = createDefaultHoursForDate(date);
-                            setSelectedDayForHours(defaultHours);
-                          }
-                        }}
+                      className={`${styles.calendarDay} ${isToday ? styles.today : ''} ${isPast ? styles.pastDay : ''} ${isSelected ? styles.selectedDay : ''}`}
+                      onClick={() => {
+                        if (dayHours) {
+                          setSelectedDayForHours(dayHours);
+                        } else {
+                          const defaultHours = createDefaultHoursForDate(date);
+                          setSelectedDayForHours(defaultHours);
+                        }
+                      }}
                     >
                       <div className={styles.dayNumber}>{date.getDate()}</div>
                       {dayHours ? (
@@ -833,84 +1019,93 @@ export default function AdminPage() {
               <div className={styles.dayDetails}>
                 <h4>{selectedDayForHours.dayName} - {selectedDayForHours.date}</h4>
                 
-                <div className={styles.hoursForm}>
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={selectedDayForHours.isOpen}
-                      onChange={(e) => handleHoursUpdate(selectedDayForHours.id, { isOpen: e.target.checked })}
-                    />
-                    Otwarte
-                  </label>
+                <div className={styles.leftSection}>
+                  <div className={styles.dateInfo}>
+                    <h5>📅 Data</h5>
+                    <p>{selectedDayForHours.dayName}, {selectedDayForHours.date}</p>
+                  </div>
+                  
+                  <div className={styles.openStatus}>
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={selectedDayForHours.isOpen}
+                        onChange={(e) => {
+                          const updatedDay = { ...selectedDayForHours, isOpen: e.target.checked };
+                          setSelectedDayForHours(updatedDay);
+                          handleHoursUpdate(selectedDayForHours.id, { isOpen: e.target.checked });
+                        }}
+                      />
+                      Restauracja otwarta
+                    </label>
+                  </div>
                   
                   {selectedDayForHours.isOpen && (
-                    <>
-                      <div className={styles.timeInputs}>
-                        <label>
-                          Godzina otwarcia:
-                          <input
-                            type="time"
-                            value={selectedDayForHours.openTime}
-                            onChange={(e) => handleHoursUpdate(selectedDayForHours.id, { openTime: e.target.value })}
-                          />
-                        </label>
-                        <label>
-                          Godzina zamknięcia:
-                          <input
-                            type="time"
-                            value={selectedDayForHours.closeTime}
-                            onChange={(e) => handleHoursUpdate(selectedDayForHours.id, { closeTime: e.target.value })}
-                          />
-                        </label>
-                      </div>
-                      
-                      <div className={styles.timeSlotsSection}>
-                        <h5>⏰ Godziny rezerwacji - Kliknij aby zablokować/odblokować</h5>
-                        <p className={styles.timeSlotsDescription}>
-                          Kliknij na godzinę aby ją zablokować (czerwona) lub odblokować (zielona)
-                        </p>
-                        <div className={styles.timeSlotsGrid}>
-                          {generateTimeSlots(selectedDayForHours.openTime, selectedDayForHours.closeTime).map(time => {
-                            const isBlocked = (selectedDayForHours.blockedHours || []).some(range => {
-                              const [start, end] = range.split('-');
-                              return time >= start && time < end;
-                            });
-                            return (
-                              <div 
-                                key={time} 
-                                className={`${styles.timeSlotItem} ${isBlocked ? styles.timeSlotBlocked : ''}`}
-                                onClick={() => toggleTimeSlotInDetails(time)}
-                              >
-                                {time}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </>
+                    <div className={styles.hoursInputs}>
+                      <label>
+                        Godzina otwarcia:
+                        <input
+                          type="time"
+                          value={selectedDayForHours.openTime}
+                          onChange={(e) => {
+                            const updatedDay = { ...selectedDayForHours, openTime: e.target.value };
+                            setSelectedDayForHours(updatedDay);
+                            handleHoursUpdate(selectedDayForHours.id, { openTime: e.target.value });
+                          }}
+                        />
+                      </label>
+                      <label>
+                        Godzina zamknięcia:
+                        <input
+                          type="time"
+                          value={selectedDayForHours.closeTime}
+                          onChange={(e) => {
+                            const updatedDay = { ...selectedDayForHours, closeTime: e.target.value };
+                            setSelectedDayForHours(updatedDay);
+                            handleHoursUpdate(selectedDayForHours.id, { closeTime: e.target.value });
+                          }}
+                        />
+                      </label>
+                    </div>
                   )}
                 </div>
                 
-                <div className={styles.detailsActions}>
-                  <button 
-                    className={styles.setupHoursButton}
-                    onClick={() => {
-                      setSelectedDateForModal(new Date(selectedDayForHours.date));
-                      setModalHoursForm({
-                        isOpen: selectedDayForHours.isOpen,
-                        openTime: selectedDayForHours.openTime,
-                        closeTime: selectedDayForHours.closeTime,
-                      });
-                      setModalBlockedRanges(
-                        (selectedDayForHours.blockedHours || []).map(range => {
+                <div className={styles.rightSection}>
+                  <div className={styles.reservationHours}>
+                    <h5>⏰ Godziny rezerwacji</h5>
+                    <p className={styles.timeSlotsDescription}>
+                      Kliknij na godzinę aby ją zablokować (czerwona) lub odblokować (zielona)
+                    </p>
+                    <div className={styles.timeSlotsGrid}>
+                      {generateTimeSlots(selectedDayForHours.openTime, selectedDayForHours.closeTime).map(time => {
+                        const isBlocked = (selectedDayForHours.blockedHours || []).some(range => {
                           const [start, end] = range.split('-');
-                          return { start, end };
-                        })
-                      );
-                      setShowHoursModal(true);
+                          return time >= start && time < end;
+                        });
+                        return (
+                          <div 
+                            key={time} 
+                            className={`${styles.timeSlotItem} ${isBlocked ? styles.timeSlotBlocked : ''}`}
+                            onClick={() => toggleTimeSlotInDetails(time)}
+                          >
+                            {time}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                <div className={styles.detailActions}>
+                  <button 
+                    className={styles.saveBlockedHoursButton}
+                    onClick={() => {
+                      handleHoursUpdate(selectedDayForHours.id, {
+                        blockedHours: selectedDayForHours.blockedHours || []
+                      });
                     }}
                   >
-                    Zmień godziny otwarcia
+                    💾 Zapisz
                   </button>
                   <button 
                     className={styles.closeDetailsButton}
@@ -932,108 +1127,6 @@ export default function AdminPage() {
         <div className={styles.backButtonContainer}>
           <button className={styles.backButton} onClick={() => setView(null)}>⬅ Wróć</button>
         </div>
-
-
-
-        {/* Hours Setup Modal */}
-        {showHoursModal && selectedDateForModal && (
-          <div className={styles.modalOverlay}>
-            <div className={styles.modalContent}>
-              <div className={styles.modalHeader}>
-                <h3>Ustaw godziny dla {selectedDateForModal.toLocaleDateString('pl-PL')} ({getDayName(selectedDateForModal)})</h3>
-                <button 
-                  className={styles.modalCloseButton}
-                  onClick={() => setShowHoursModal(false)}
-                >
-                  ✕
-                </button>
-              </div>
-
-              <div className={styles.modalBody}>
-                {/* Restaurant Open/Closed Toggle */}
-                <div className={styles.modalSection}>
-                  <h4>🕒 Status restauracji</h4>
-                  <label className={styles.modalCheckbox}>
-                    <input
-                      type="checkbox"
-                      checked={modalHoursForm.isOpen}
-                      onChange={(e) => setModalHoursForm({ ...modalHoursForm, isOpen: e.target.checked })}
-                    />
-                    <span>Restauracja otwarta</span>
-                  </label>
-                </div>
-
-                {/* Opening Hours */}
-                {modalHoursForm.isOpen && (
-                  <div className={styles.modalSection}>
-                    <h4>⏰ Godziny otwarcia</h4>
-                    <div className={styles.modalTimeInputs}>
-                      <label>
-                        <span>Od:</span>
-                        <input
-                          type="time"
-                          value={modalHoursForm.openTime}
-                          onChange={(e) => setModalHoursForm({ ...modalHoursForm, openTime: e.target.value })}
-                        />
-                      </label>
-                      <label>
-                        <span>Do:</span>
-                        <input
-                          type="time"
-                          value={modalHoursForm.closeTime}
-                          onChange={(e) => setModalHoursForm({ ...modalHoursForm, closeTime: e.target.value })}
-                        />
-                      </label>
-                    </div>
-                  </div>
-                )}
-
-
-
-                {/* Clickable time slots */}
-                {modalHoursForm.isOpen && (
-                  <div className={styles.modalSection}>
-                    <h4>⏰ Godziny rezerwacji - Kliknij aby zablokować/odblokować</h4>
-                    <p className={styles.modalDescription}>
-                      Kliknij na godzinę aby ją zablokować (czerwona) lub odblokować (zielona)
-                    </p>
-                    <div className={styles.modalTimeSlots}>
-                      {generateTimeSlots(modalHoursForm.openTime, modalHoursForm.closeTime).map(time => {
-                        const isBlocked = modalBlockedRanges.some(range => 
-                          time >= range.start && time < range.end
-                        );
-                        return (
-                          <div 
-                            key={time} 
-                            className={`${styles.modalTimeSlot} ${isBlocked ? styles.modalTimeSlotBlocked : ''}`}
-                            onClick={() => toggleTimeSlot(time)}
-                          >
-                            {time}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className={styles.modalFooter}>
-                <button 
-                  className={styles.modalCancelButton}
-                  onClick={() => setShowHoursModal(false)}
-                >
-                  Anuluj
-                </button>
-                <button 
-                  className={styles.modalSaveButton}
-                  onClick={handleSaveModalHours}
-                >
-                  Zapisz godziny
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     );
   }

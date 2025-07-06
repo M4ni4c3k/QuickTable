@@ -10,6 +10,21 @@
  * - Reservations: Future booking information with conflict checking
  */
 
+import { initializeApp, cert } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
+import { readFileSync } from 'fs';
+import { join } from 'path';
+
+const serviceAccountPath = join(process.cwd(), 'serviceAccountKey.json');
+const serviceAccount = JSON.parse(readFileSync(serviceAccountPath, 'utf8'));
+
+initializeApp({
+  credential: cert(serviceAccount),
+  projectId: serviceAccount.project_id
+});
+
+const db = getFirestore();
+
 console.log('=== RESERVATION MIGRATION SCRIPT ===');
 console.log('This script helps migrate reservation data from tables to separate reservations collection');
 
@@ -99,6 +114,95 @@ console.log('- Rejected and cancelled reservations are ignored');
 console.log('- Reservations are completely separate from table status');
 
 /**
+ * Actual migration function
+ * Performs the migration of reservation data from tables to reservations collection
+ */
+async function performMigration() {
+  try {
+    console.log('\n🔄 Rozpoczynam migrację rezerwacji...');
+    
+    // Get all tables
+    const tablesSnapshot = await db.collection('tables').get();
+    const tables = tablesSnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+    
+    // Filter tables that have reservation data
+    const tablesWithReservations = tables.filter(table => 
+      table.reservationDate || 
+      table.reservationHour || 
+      table.reservationTime ||
+      table.status === 'reserved'
+    );
+    
+    if (tablesWithReservations.length === 0) {
+      console.log('ℹ️ Brak tabel z danymi rezerwacji do migracji');
+      return;
+    }
+    
+    console.log(`📊 Znaleziono ${tablesWithReservations.length} tabel z rezerwacjami`);
+    
+    let migratedCount = 0;
+    let errorCount = 0;
+    
+    for (const table of tablesWithReservations) {
+      try {
+        // Create reservation document
+        const reservationData = {
+          tableId: table.id,
+          tableNumber: table.number,
+          customerName: table.customerName || 'Nieznany klient',
+          customerEmail: table.customerEmail || '',
+          customerPhone: table.customerPhone || '',
+          guests: table.guests || 1,
+          reservationDate: table.reservationDate || new Date().toISOString().split('T')[0],
+          reservationHour: table.reservationHour || '12:00',
+          reservationTime: table.reservationTime || `${table.reservationDate || new Date().toISOString().split('T')[0]} ${table.reservationHour || '12:00'}`,
+          status: table.status === 'reserved' ? 'pending' : 'accepted',
+          dataState: 1,
+          isAccepted: table.status === 'reserved' ? false : true,
+          createdAt: new Date(),
+          notes: table.notes || ''
+        };
+        
+        await db.collection('reservations').add(reservationData);
+        
+        // Clean up table document
+        const tableUpdates = {
+          status: 'free',
+          customerName: null,
+          customerEmail: null,
+          customerPhone: null,
+          guests: null,
+          reservationDate: null,
+          reservationHour: null,
+          reservationTime: null,
+          notes: null,
+          updatedAt: new Date()
+        };
+        
+        await db.collection('tables').doc(table.id).update(tableUpdates);
+        
+        console.log(`✅ Zmigrowano rezerwację dla stolika ${table.number}`);
+        migratedCount++;
+        
+      } catch (error) {
+        console.error(`❌ Błąd podczas migracji stolika ${table.number}:`, error);
+        errorCount++;
+      }
+    }
+    
+    console.log(`\n🎉 Migracja zakończona!`);
+    console.log(`📊 Zmigrowano: ${migratedCount} rezerwacji`);
+    console.log(`❌ Błędy: ${errorCount}`);
+    
+  } catch (error) {
+    console.error('❌ Błąd podczas migracji:', error);
+  }
+}
+
+/**
  * Manual migration instructions
  * Step-by-step guide for completing the migration in Firebase Console
  */
@@ -110,4 +214,16 @@ console.log('   - Create new reservation document with the structure above');
 console.log('   - Remove reservation fields from table document');
 console.log('   - Update table status to "free" or "occupied"');
 console.log('4. Test the new reservation system');
-console.log('5. Verify conflict checking works correctly'); 
+console.log('5. Verify conflict checking works correctly');
+
+// Run the migration
+console.log('\n🔄 Uruchamiam automatyczną migrację...');
+performMigration()
+  .then(() => {
+    console.log('✅ Migracja zakończona pomyślnie');
+    process.exit(0);
+  })
+  .catch((error) => {
+    console.error('❌ Błąd podczas migracji:', error);
+    process.exit(1);
+  }); 
