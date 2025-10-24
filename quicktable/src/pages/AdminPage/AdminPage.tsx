@@ -5,17 +5,18 @@ import {
   updateDoc,
   doc,
   writeBatch,
+  addDoc,
+  deleteDoc,
 } from 'firebase/firestore';
 import { db } from '../../firebase/firebaseConfig';
 import styles from './AdminPage.module.css';
-import type { MenuItem, Reservation, RestaurantHours } from '../../types/types';
+import type { MenuItem, Reservation, RestaurantHours, Table, Order } from '../../types/types';
 import { 
   createMenuItem, 
   createRestaurantHours, 
-  updateDocument, 
-  deleteDocument,
-  getDocuments 
+  deleteDocument
 } from '../../utils/databaseUtils';
+import SettingsIcon from '../../components/SettingsIcon/SettingsIcon';
   
 
 export default function AdminPage() {
@@ -35,8 +36,14 @@ export default function AdminPage() {
   const [showArchivedReservations, setShowArchivedReservations] = useState(false);
   const [selectedDayForHours, setSelectedDayForHours] = useState<RestaurantHours | null>(null);
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [showViewModal, setShowViewModal] = useState(false);
-  const [showChangeViewModal, setShowChangeViewModal] = useState(false);
+  const [tables, setTables] = useState<Table[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [newTableNumber, setNewTableNumber] = useState<number>(0);
+  const [addingNewTable, setAddingNewTable] = useState(false);
+  const [expandedReservations, setExpandedReservations] = useState<Set<string>>(new Set());
+  const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
+  const [expandedOrderDetails, setExpandedOrderDetails] = useState<Set<string>>(new Set());
+  const [statusChangeModal, setStatusChangeModal] = useState<{ tableId: string; currentStatus: string } | null>(null);
 
 
   useEffect(() => {
@@ -44,6 +51,8 @@ export default function AdminPage() {
       const menuSnapshot = await getDocs(collection(db, 'menu'));
       const reservationsSnapshot = await getDocs(collection(db, 'reservations'));
       const hoursSnapshot = await getDocs(collection(db, 'restaurantHours'));
+      const tablesSnapshot = await getDocs(collection(db, 'tables'));
+      const ordersSnapshot = await getDocs(collection(db, 'orders'));
 
       setMenuItems(menuSnapshot.docs.map(doc => ({
         ...(doc.data() as Omit<MenuItem, 'id'>),
@@ -57,6 +66,16 @@ export default function AdminPage() {
 
       setRestaurantHours(hoursSnapshot.docs.map(doc => ({
         ...(doc.data() as Omit<RestaurantHours, 'id'>),
+        id: doc.id,
+      })));
+
+      setTables(tablesSnapshot.docs.map(doc => ({
+        ...(doc.data() as Omit<Table, 'id'>),
+        id: doc.id,
+      })));
+
+      setOrders(ordersSnapshot.docs.map(doc => ({
+        ...(doc.data() as Omit<Order, 'id'>),
         id: doc.id,
       })));
     };
@@ -155,6 +174,150 @@ export default function AdminPage() {
     setReservations(reservations.map(res => 
       res.id === reservationId ? { ...res, dataState: 0 } : res
     ));
+  };
+
+  const handleAddTable = async () => {
+    if (!newTableNumber || newTableNumber <= 0) {
+      alert('Podaj poprawny numer stolika');
+      return;
+    }
+    
+    if (tables.some(t => t.number === newTableNumber)) {
+      alert('Stolik o tym numerze już istnieje');
+      return;
+    }
+    
+    try {
+      const newTable: Omit<Table, 'id'> = {
+        number: newTableNumber,
+        status: 'free',
+      };
+      
+      const docRef = await addDoc(collection(db, 'tables'), newTable);
+      setTables([...tables, { id: docRef.id, ...newTable }]);
+      setNewTableNumber(0);
+      setAddingNewTable(false);
+    } catch (error) {
+      console.error('Error adding table:', error);
+      alert('Błąd podczas dodawania stolika');
+    }
+  };
+
+  const handleDeleteTable = async (tableId: string) => {
+    if (!confirm('Czy na pewno chcesz usunąć ten stolik?')) {
+      return;
+    }
+    
+    try {
+      await deleteDoc(doc(db, 'tables', tableId));
+      setTables(tables.filter(t => t.id !== tableId));
+    } catch (error) {
+      console.error('Error deleting table:', error);
+      alert('Błąd podczas usuwania stolika');
+    }
+  };
+
+
+  const getNextReservationForTable = (tableNumber: number) => {
+    const now = new Date();
+    const currentDateStr = formatDate(now);
+    const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+    
+    const upcomingReservations = reservations
+      .filter(r => 
+        r.tableNumber === tableNumber && 
+        r.dataState === 1 && 
+        r.status === 'accepted' &&
+        (r.reservationDate > currentDateStr || 
+         (r.reservationDate === currentDateStr && r.reservationHour >= currentTime))
+      )
+      .sort((a, b) => {
+        const dateCompare = a.reservationDate.localeCompare(b.reservationDate);
+        if (dateCompare !== 0) return dateCompare;
+        return a.reservationHour.localeCompare(b.reservationHour);
+      });
+    
+    return upcomingReservations[0] || null;
+  };
+
+  const isTableOccupied = (tableId: string) => {
+    return orders.some(order => 
+      order.tableId === tableId && 
+      order.status !== 'done' &&
+      order.dataState === 1
+    );
+  };
+
+  const getAllOrdersForTable = (tableId: string) => {
+    return orders.filter(order => 
+      order.tableId === tableId && 
+      order.dataState === 1
+    );
+  };
+
+  const openStatusChangeModal = (tableId: string, currentStatus: string) => {
+    setStatusChangeModal({ tableId, currentStatus });
+  };
+
+  const confirmStatusChange = async () => {
+    if (!statusChangeModal) return;
+
+    const { tableId, currentStatus } = statusChangeModal;
+    const newStatus = currentStatus === 'free' ? 'occupied' : 'free';
+    
+    try {
+      await updateDoc(doc(db, 'tables', tableId), { status: newStatus });
+      setTables(tables.map(t => t.id === tableId ? { ...t, status: newStatus } : t));
+      setStatusChangeModal(null);
+    } catch (error) {
+      console.error('Error updating table status:', error);
+      alert('Błąd podczas aktualizacji statusu stolika');
+    }
+  };
+
+  const toggleReservationExpand = (tableId: string) => {
+    const newExpanded = new Set(expandedReservations);
+    if (newExpanded.has(tableId)) {
+      newExpanded.delete(tableId);
+    } else {
+      newExpanded.add(tableId);
+    }
+    setExpandedReservations(newExpanded);
+  };
+
+  const toggleOrderExpand = (tableId: string) => {
+    const newExpanded = new Set(expandedOrders);
+    if (newExpanded.has(tableId)) {
+      newExpanded.delete(tableId);
+    } else {
+      newExpanded.add(tableId);
+    }
+    setExpandedOrders(newExpanded);
+  };
+
+  const toggleOrderDetailsExpand = (orderId: string) => {
+    const newExpanded = new Set(expandedOrderDetails);
+    if (newExpanded.has(orderId)) {
+      newExpanded.delete(orderId);
+    } else {
+      newExpanded.add(orderId);
+    }
+    setExpandedOrderDetails(newExpanded);
+  };
+
+  const handleMarkOrderAsDone = async (orderId: string) => {
+    try {
+      await updateDoc(doc(db, 'orders', orderId), { 
+        status: 'done'
+      });
+      
+      setOrders(orders.map(order => 
+        order.id === orderId ? { ...order, status: 'done' } : order
+      ));
+    } catch (error) {
+      console.error('Error marking order as done:', error);
+      alert('Błąd podczas oznaczania zamówienia jako wykonane');
+    }
   };
 
   const handleDeleteAllReservationsForDate = async (date: string) => {
@@ -348,10 +511,6 @@ export default function AdminPage() {
     return days;
   };
 
-  const getDayName = (date: Date) => {
-    const dayNames = ['Niedziela', 'Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota'];
-    return dayNames[date.getDay()];
-  };
 
   const formatDate = (date: Date) => {
     const year = date.getFullYear();
@@ -453,13 +612,9 @@ export default function AdminPage() {
         <div className={styles.headerRow}>
           <div className={styles.appName}>Quick Table</div>
           <h2 className={styles.pageTitle}>Wybierz opcję</h2>
-          <button 
-            className={styles.gearButton} 
-            onClick={() => setShowViewModal(true)}
-            title="Ustawienia"
-          >
-            ⚙️
-          </button>
+          <div className={styles.headerActions}>
+            <SettingsIcon />
+          </div>
         </div>
         <div className={styles.selectionPanel}>
           <button className={styles.bigButton} onClick={() => setView('menu')}>🍽️ Edycja Menu</button>
@@ -467,53 +622,6 @@ export default function AdminPage() {
           <button className={styles.bigButton} onClick={() => setView('reservations')}>📅 Zarządzanie Rezerwacjami</button>
           <button className={styles.bigButton} onClick={() => setView('hours')}>🕐 Godziny Otwarcia</button>
         </div>
-        
-        {showViewModal && (
-          <div className={styles.modalOverlay} onClick={() => setShowViewModal(false)}>
-            <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-              <h3>Ustawienia</h3>
-              <div className={styles.modalButtons}>
-                <button onClick={() => setShowChangeViewModal(true)}>
-                  Zmień widok
-                </button>
-              </div>
-              <button className={styles.closeButton} onClick={() => setShowViewModal(false)}>
-                Zamknij
-              </button>
-            </div>
-          </div>
-        )}
-        
-        {showChangeViewModal && (
-          <div className={styles.modalOverlay} onClick={() => setShowChangeViewModal(false)}>
-            <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-              <h3>Zmień widok</h3>
-              <div className={styles.modalButtons}>
-                <button onClick={() => { setShowChangeViewModal(false); setShowViewModal(false); window.location.href = '/client'; }}>
-                  Strona Klienta
-                </button>
-                <button onClick={() => { setShowChangeViewModal(false); setShowViewModal(false); window.location.href = '/menu'; }}>
-                  Menu
-                </button>
-                <button onClick={() => { setShowChangeViewModal(false); setShowViewModal(false); window.location.href = '/order'; }}>
-                  Zamówienia
-                </button>
-                <button onClick={() => { setShowChangeViewModal(false); setShowViewModal(false); window.location.href = '/reservation'; }}>
-                  Rezerwacje
-                </button>
-                <button onClick={() => { setShowChangeViewModal(false); setShowViewModal(false); window.location.href = '/kitchen'; }}>
-                  Kuchnia
-                </button>
-                <button onClick={() => { setShowChangeViewModal(false); setShowViewModal(false); window.location.href = '/waiter'; }}>
-                  Kelner
-                </button>
-              </div>
-              <button className={styles.closeButton} onClick={() => setShowChangeViewModal(false)}>
-                Wróć
-              </button>
-            </div>
-          </div>
-        )}
       </div>
     );
   }
@@ -525,7 +633,9 @@ export default function AdminPage() {
           <div className={styles.sectionHeaderRow}>
             <div className={styles.sectionAppName}>Quick Table</div>
             <h2 className={styles.sectionTitle}>Menu - lista dań</h2>
-            <div></div>
+            <div className={styles.headerActions}>
+              <SettingsIcon />
+            </div>
           </div>
           <ul className={styles.menuList}>
             {menuItems.map(item => (
@@ -555,7 +665,9 @@ export default function AdminPage() {
           <div className={styles.sectionHeaderRow}>
             <div className={styles.sectionAppName}>Quick Table</div>
             <h2 className={styles.sectionTitle}>Edycja dania</h2>
-            <div></div>
+            <div className={styles.headerActions}>
+              <SettingsIcon />
+            </div>
           </div>
           <div className={styles.itemRow}>
             <label>Nazwa:</label>
@@ -638,7 +750,9 @@ export default function AdminPage() {
           <div className={styles.sectionHeaderRow}>
             <div className={styles.sectionAppName}>Quick Table</div>
             <h2 className={styles.sectionTitle}>Dodaj nowe danie</h2>
-            <div></div>
+            <div className={styles.headerActions}>
+              <SettingsIcon />
+            </div>
           </div>
           <div className={styles.itemRow}>
             <label>Nazwa:</label>
@@ -706,13 +820,235 @@ export default function AdminPage() {
   }
 
   if (view === 'tables') {
+    const sortedTables = [...tables].sort((a, b) => a.number - b.number);
+
     return (
       <div className={styles.adminContainer}>
         <div className={styles.sectionHeaderRow}>
           <div className={styles.sectionAppName}>Quick Table</div>
           <h2 className={styles.sectionTitle}>Zarządzanie Stolikami</h2>
-          <div></div>
+          <div className={styles.headerActions}>
+            <SettingsIcon />
+          </div>
         </div>
+
+        <div className={styles.tablesManagement}>
+          <div className={styles.tablesHeader}>
+            <h3>Lista Stolików ({tables.length})</h3>
+            <button 
+              className={styles.addTableButton}
+              onClick={() => setAddingNewTable(true)}
+            >
+              ➕ Dodaj Stolik
+            </button>
+          </div>
+
+          {addingNewTable && (
+            <div className={styles.addTableForm}>
+              <h4>Dodaj Nowy Stolik</h4>
+              <div className={styles.formGroup}>
+                <label>Numer Stolika:</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={newTableNumber || ''}
+                  onChange={(e) => setNewTableNumber(parseInt(e.target.value) || 0)}
+                  placeholder="Wprowadź numer stolika"
+                />
+              </div>
+              <div className={styles.formActions}>
+                <button 
+                  className={styles.saveButton}
+                  onClick={handleAddTable}
+                >
+                  💾 Zapisz
+                </button>
+                <button 
+                  className={styles.cancelButton}
+                  onClick={() => {
+                    setAddingNewTable(false);
+                    setNewTableNumber(0);
+                  }}
+                >
+                  ❌ Anuluj
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className={styles.tablesGrid}>
+            {sortedTables.length === 0 ? (
+              <div className={styles.noTables}>
+                <p>Brak stolików. Dodaj pierwszy stolik aby rozpocząć.</p>
+              </div>
+            ) : (
+              sortedTables.map(table => {
+                const hasActiveOrders = isTableOccupied(table.id);
+                const nextReservation = getNextReservationForTable(table.number);
+                const allOrders = getAllOrdersForTable(table.id);
+                const allOrdersCompleted = allOrders.length > 0 && allOrders.every(order => order.status === 'done');
+                
+                let statusDotClass = styles.statusDotFree;
+                if (hasActiveOrders) {
+                  statusDotClass = styles.statusDotYellow;
+                } else if (table.status === 'occupied') {
+                  statusDotClass = styles.statusDotOccupied;
+                }
+                
+                return (
+                  <div 
+                    key={table.id} 
+                    className={styles.tableCard}
+                  >
+                    <div className={styles.tableCardHeader}>
+                      <button
+                        className={`${styles.statusDotButton} ${statusDotClass}`}
+                        onClick={() => openStatusChangeModal(table.id, table.status)}
+                        title="Zmień status stolika"
+                      ></button>
+                      
+                      <h4>Stolik {table.number}</h4>
+                      
+                      <button
+                        className={styles.deleteTableButton}
+                        onClick={() => handleDeleteTable(table.id)}
+                        title="Usuń stolik"
+                      >
+                        🗑️
+                      </button>
+                    </div>
+
+                    <div className={styles.tableCardBody}>
+                      {allOrders.length > 0 && (
+                        <div className={`${styles.tableActiveOrder} ${allOrdersCompleted ? styles.allOrdersCompleted : ''}`}>
+                          <button 
+                            className={styles.orderToggle}
+                            onClick={() => toggleOrderExpand(table.id)}
+                          >
+                            <span className={styles.orderIcon}>{allOrdersCompleted ? '✅' : '📋'}</span>
+                            <span className={styles.orderLabel}>Zamówienia ({allOrders.length})</span>
+                            <span className={styles.toggleIcon}>
+                              {expandedOrders.has(table.id) ? '▼' : '▶'}
+                            </span>
+                          </button>
+                          
+                          {expandedOrders.has(table.id) && (
+                            <div className={styles.orderDetails}>
+                              {allOrders.map((order, idx) => (
+                                <div key={order.id} className={styles.compactOrderCard}>
+                                  <div 
+                                    className={styles.compactOrderHeader}
+                                    onClick={() => toggleOrderDetailsExpand(order.id)}
+                                  >
+                                    <div className={styles.orderSummary}>
+                                      <span className={styles.orderNumber}>Zamówienie #{idx + 1}</span>
+                                      <span className={styles.orderTotal}>Suma: {order.total.toFixed(2)} zł</span>
+                                    </div>
+                                    <span className={styles.expandIcon}>
+                                      {expandedOrderDetails.has(order.id) ? '▼' : '▶'}
+                                    </span>
+                                  </div>
+
+                                  {expandedOrderDetails.has(order.id) && (
+                                    <div className={styles.orderExpandedContent}>
+                                      <div className={styles.orderItemsList}>
+                                        {order.items.map((item, itemIdx) => (
+                                          <div key={itemIdx} className={styles.orderItem}>
+                                            <span className={styles.itemQuantity}>{item.quantity}x</span>
+                                            <span className={styles.itemName}>{item.name}</span>
+                                            <span className={styles.itemPrice}>{(item.price * item.quantity).toFixed(2)} zł</span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  <div className={styles.orderActions}>
+                                    <button
+                                      className={`${styles.orderActionButton} ${order.status === 'done' ? styles.orderDone : styles.orderPending}`}
+                                      onClick={() => handleMarkOrderAsDone(order.id)}
+                                      disabled={order.status === 'done'}
+                                    >
+                                      {order.status === 'done' ? '✅ Wydane' : '📤 Wydaj klientowi'}
+                                    </button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {nextReservation && (
+                        <div className={styles.tableReservation}>
+                          <button 
+                            className={styles.reservationToggle}
+                            onClick={() => toggleReservationExpand(table.id)}
+                          >
+                            <span className={styles.calendarIcon}>📅</span>
+                            <span className={styles.reservationLabel}>Najbliższa rezerwacja</span>
+                            <span className={styles.toggleIcon}>
+                              {expandedReservations.has(table.id) ? '▼' : '▶'}
+                            </span>
+                          </button>
+                          
+                          {expandedReservations.has(table.id) && (
+                            <div className={styles.reservationDetails}>
+                              <p><strong>Data:</strong> {nextReservation.reservationDate}</p>
+                              <p><strong>Godzina:</strong> {nextReservation.reservationHour}</p>
+                              <p><strong>Klient:</strong> {nextReservation.customerName}</p>
+                              <p><strong>Liczba gości:</strong> {nextReservation.guests}</p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {allOrders.length === 0 && !nextReservation && (
+                        <div className={styles.tableInfo}>
+                          <p className={styles.infoText}>
+                            Brak zamówień i rezerwacji
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+
+        {statusChangeModal && (
+          <div className={styles.modalOverlay} onClick={() => setStatusChangeModal(null)}>
+            <div className={styles.statusModal} onClick={(e) => e.stopPropagation()}>
+              <h3>Zmiana statusu stolika</h3>
+              <p className={styles.modalMessage}>
+                Czy na pewno chcesz zmienić status stolika na{' '}
+                <strong>{statusChangeModal.currentStatus === 'free' ? 'ZAJĘTY' : 'WOLNY'}</strong>?
+              </p>
+              {isTableOccupied(statusChangeModal.tableId) && statusChangeModal.currentStatus === 'occupied' && (
+                <div className={styles.warningMessage}>
+                  ⚠️ Uwaga: Ten stolik ma aktywne zamówienia!
+                </div>
+              )}
+              <div className={styles.modalActions}>
+                <button 
+                  className={styles.confirmButton}
+                  onClick={confirmStatusChange}
+                >
+                  ✅ Potwierdź
+                </button>
+                <button 
+                  className={styles.cancelModalButton}
+                  onClick={() => setStatusChangeModal(null)}
+                >
+                  ❌ Anuluj
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className={styles.backButtonContainer}>
           <button className={styles.backButton} onClick={() => setView(null)}>⬅ Wróć</button>
         </div>
@@ -728,7 +1064,9 @@ export default function AdminPage() {
         <div className={styles.sectionHeaderRow}>
           <div className={styles.sectionAppName}>Quick Table</div>
           <h2 className={styles.sectionTitle}>Zarządzanie Rezerwacjami</h2>
-          <div></div>
+          <div className={styles.headerActions}>
+            <SettingsIcon />
+          </div>
         </div>
         
         <div className={styles.calendarLayout}>
@@ -930,7 +1268,9 @@ export default function AdminPage() {
         <div className={styles.sectionHeaderRow}>
           <div className={styles.sectionAppName}>Quick Table</div>
           <h2 className={styles.sectionTitle}>Godziny Otwarcia</h2>
-          <div></div>
+          <div className={styles.headerActions}>
+            <SettingsIcon />
+          </div>
         </div>
         
         <div className={styles.calendarLayout}>

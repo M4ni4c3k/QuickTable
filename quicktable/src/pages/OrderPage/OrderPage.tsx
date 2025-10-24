@@ -131,9 +131,6 @@ export default function OrderPage() {
     <div className={styles.orderPage}>
       <div className={styles.headerSection}>
         <h2>Rozpocznij zamówienie</h2>
-        <button className={styles.backButton} onClick={() => navigate('/')}>
-          ⬅ Wróć do strony głównej
-        </button>
       </div>
 
       {!selectedTable && (
@@ -216,6 +213,12 @@ export default function OrderPage() {
           <h3>Zamówienie zostało zapisane!</h3>
         </div>
       )}
+
+      <div className={styles.backButtonContainer}>
+        <button className={styles.backButton} onClick={() => navigate('/')}>
+          ⬅ Wróć do strony głównej
+        </button>
+      </div>
     </div>
   );
 }

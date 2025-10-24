@@ -5,47 +5,28 @@ import {
   doc,
   onSnapshot,
   updateDoc,
-  getDocs,
 } from 'firebase/firestore';
 import type { Table, Order, Reservation } from '../../types/types';
 import { db } from '../../firebase/firebaseConfig';
 import styles from './WaiterPage.module.css';
-import { createOrder } from '../../utils/databaseUtils';
+import SettingsIcon from '../../components/SettingsIcon/SettingsIcon';
 
 export default function WaiterPage() {
   const [tables, setTables] = useState<Table[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [reservations, setReservations] = useState<Reservation[]>([]);
-  const [menuItems, setMenuItems] = useState<{ name: string; price: number }[]>([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<'tables' | 'reservations' | null>(null);
-  const [selectedTable, setSelectedTable] = useState<Table | null>(null);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [showArchivedReservations, setShowArchivedReservations] = useState(false);
-  const [showViewModal, setShowViewModal] = useState(false);
-  const [showChangeViewModal, setShowChangeViewModal] = useState(false);
+  const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
+  const [expandedOrderDetails, setExpandedOrderDetails] = useState<Set<string>>(new Set());
+  const [expandedReservations, setExpandedReservations] = useState<Set<string>>(new Set());
   
-  const [newOrder, setNewOrder] = useState<Omit<Order, 'id' | 'timestamp'>>({
-    tableId: '',
-    items: [],
-    total: 0,
-    status: 'pending',
-    waiterName: 'Anna'
-  });
 
   const navigate = useNavigate();
 
-  // Real-time menu items listener
-  useEffect(() => {
-    const menuRef = collection(db, 'menu');
-    const unsubscribe = onSnapshot(menuRef, (snapshot) => {
-      const items = snapshot.docs.map(doc => doc.data() as { name: string; price: number });
-      setMenuItems(items);
-    });
-
-    return () => unsubscribe();
-  }, []);
 
   // Real-time tables listener
   useEffect(() => {
@@ -90,61 +71,81 @@ export default function WaiterPage() {
     return () => unsubscribe();
   }, []);
 
-  const handleTableClick = (table: Table) => {
-    setSelectedTable(table);
-  };
-
-  const addOrderToTable = async () => {
-    if (!selectedTable) return;
-
-    try {
-      await createOrder({
-        ...newOrder,
-        tableId: selectedTable.id,
-        dataState: 1
-      });
-
-      await updateDoc(doc(db, 'tables', selectedTable.id), {
-        status: 'occupied'
-      });
-
-      setNewOrder({
-        tableId: selectedTable.id,
-        items: [],
-        total: 0,
-        status: 'pending',
-        waiterName: 'Anna'
-      });
-      setSelectedTable(null);
-    } catch (error) {
-      console.error("Błąd podczas dodawania zamówienia:", error);
-    }
-  };
-
-  const completeAllOrders = async () => {
-    if (!selectedTable) return;
-
-    const activeOrders = orders.filter(
-      (order) =>
-        order.tableId === selectedTable.id &&
-        (order.dataState ?? 1) === 1
+  const isTableOccupied = (tableId: string) => {
+    return orders.some(order => 
+      order.tableId === tableId && 
+      order.status !== 'done' &&
+      order.dataState === 1
     );
+  };
 
-    try {
-      for (const order of activeOrders) {
-        await updateDoc(doc(db, 'orders', order.id), {
-          dataState: 2,
-          status: 'completed'
-        });
-      }
+  const getAllOrdersForTable = (tableId: string) => {
+    return orders.filter(order => 
+      order.tableId === tableId && 
+      order.dataState === 1
+    );
+  };
 
-      await updateDoc(doc(db, 'tables', selectedTable.id), {
-        status: 'free'
+  const getNextReservationForTable = (tableNumber: number) => {
+    const now = new Date();
+    const currentDateStr = formatDate(now);
+    const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+    
+    const upcomingReservations = reservations
+      .filter(r => 
+        r.tableNumber === tableNumber && 
+        r.dataState === 1 && 
+        r.status === 'accepted' &&
+        (r.reservationDate > currentDateStr || 
+         (r.reservationDate === currentDateStr && r.reservationHour >= currentTime))
+      )
+      .sort((a, b) => {
+        const dateCompare = a.reservationDate.localeCompare(b.reservationDate);
+        if (dateCompare !== 0) return dateCompare;
+        return a.reservationHour.localeCompare(b.reservationHour);
       });
+    
+    return upcomingReservations[0] || null;
+  };
 
-      setSelectedTable(null);
+  const toggleOrderExpand = (tableId: string) => {
+    const newExpanded = new Set(expandedOrders);
+    if (newExpanded.has(tableId)) {
+      newExpanded.delete(tableId);
+    } else {
+      newExpanded.add(tableId);
+    }
+    setExpandedOrders(newExpanded);
+  };
+
+  const toggleOrderDetailsExpand = (orderId: string) => {
+    const newExpanded = new Set(expandedOrderDetails);
+    if (newExpanded.has(orderId)) {
+      newExpanded.delete(orderId);
+    } else {
+      newExpanded.add(orderId);
+    }
+    setExpandedOrderDetails(newExpanded);
+  };
+
+  const toggleReservationExpand = (tableId: string) => {
+    const newExpanded = new Set(expandedReservations);
+    if (newExpanded.has(tableId)) {
+      newExpanded.delete(tableId);
+    } else {
+      newExpanded.add(tableId);
+    }
+    setExpandedReservations(newExpanded);
+  };
+
+  const handleMarkOrderAsDone = async (orderId: string) => {
+    try {
+      await updateDoc(doc(db, 'orders', orderId), { 
+        status: 'done'
+      });
     } catch (error) {
-      console.error('Błąd przy kończeniu zamówień:', error);
+      console.error('Error marking order as done:', error);
+      alert('Błąd podczas oznaczania zamówienia jako wykonane');
     }
   };
 
@@ -209,13 +210,9 @@ export default function WaiterPage() {
         <div className={styles.headerRow}>
           <div className={styles.appName}>Quick Table</div>
           <h2 className={styles.pageTitle}>Panel Kelnera</h2>
-          <button 
-            className={styles.gearButton} 
-            onClick={() => setShowViewModal(true)}
-            title="Ustawienia"
-          >
-            ⚙️
-          </button>
+          <div className={styles.headerActions}>
+            <SettingsIcon />
+          </div>
         </div>
         <div className={styles.selectionPanel}>
           <button className={styles.bigButton} onClick={() => setView('tables')}>🪑 Zarządzanie Stolikami</button>
@@ -224,215 +221,157 @@ export default function WaiterPage() {
         <div className={styles.backButtonContainer}>
           <button className={styles.backButton} onClick={() => navigate('/')}>⬅ Wróć</button>
         </div>
-        
-        {showViewModal && (
-          <div className={styles.modalOverlay} onClick={() => setShowViewModal(false)}>
-            <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-              <h3>Ustawienia</h3>
-              <div className={styles.modalButtons}>
-                <button onClick={() => setShowChangeViewModal(true)}>
-                  Zmień widok
-                </button>
-              </div>
-              <button className={styles.closeButton} onClick={() => setShowViewModal(false)}>
-                Zamknij
-              </button>
-            </div>
-          </div>
-        )}
-        
-        {showChangeViewModal && (
-          <div className={styles.modalOverlay} onClick={() => setShowChangeViewModal(false)}>
-            <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-              <h3>Zmień widok</h3>
-              <div className={styles.modalButtons}>
-                <button onClick={() => { setShowChangeViewModal(false); setShowViewModal(false); window.location.href = '/admin'; }}>
-                  Panel Administracyjny
-                </button>
-                <button onClick={() => { setShowChangeViewModal(false); setShowViewModal(false); window.location.href = '/client'; }}>
-                  Strona Klienta
-                </button>
-                <button onClick={() => { setShowChangeViewModal(false); setShowViewModal(false); window.location.href = '/menu'; }}>
-                  Menu
-                </button>
-                <button onClick={() => { setShowChangeViewModal(false); setShowViewModal(false); window.location.href = '/order'; }}>
-                  Zamówienia
-                </button>
-                <button onClick={() => { setShowChangeViewModal(false); setShowViewModal(false); window.location.href = '/reservation'; }}>
-                  Rezerwacje
-                </button>
-                <button onClick={() => { setShowChangeViewModal(false); setShowViewModal(false); window.location.href = '/kitchen'; }}>
-                  Kuchnia
-                </button>
-              </div>
-              <button className={styles.closeButton} onClick={() => setShowChangeViewModal(false)}>
-                Wróć
-              </button>
-            </div>
-          </div>
-        )}
       </div>
     );
   }
 
   if (view === 'tables') {
-    const today = new Date();
-    const todayString = formatDate(today);
-    const todayReservations = getReservationsForDate(todayString, false);
-    const currentTime = today.toLocaleTimeString('pl-PL', { 
-      hour: '2-digit', 
-      minute: '2-digit' 
-    });
-    const currentDate = today.toLocaleDateString('pl-PL', { 
-      weekday: 'long', 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
-    });
+    const sortedTables = [...tables].sort((a, b) => a.number - b.number);
 
     return (
       <div className={styles.waiterContainer}>
-        <h2 className={styles.pageTitle}>
-          Zarządzanie Stolikami - {currentDate} {currentTime}
-        </h2>
-        
-        <div className={styles.tablesLayout}>
-          <div className={styles.tablesGrid}>
-            {tables.map((table) => {
-              const activeOrders = orders.filter(
-                (order) => order.tableId === table.id && (order.dataState ?? 1) === 1
-              );
-
-              return (
-                <div
-                  key={table.id}
-                  className={`${styles.table} ${styles[`table-${table.status}`]} ${selectedTable?.id === table.id ? styles.selectedTable : ''}`}
-                  onClick={() => handleTableClick(table)}
-                >
-                  <span className={styles.tableNumber}>Stolik {table.number}</span>
-                  <span className={styles.tableStatus}>
-                    {table.status === 'free' && 'Wolny'}
-                    {table.status === 'occupied' && 'Zajęty'}
-                  </span>
-                  {table.customerName && (
-                    <span className={styles.customerName}>{table.customerName}</span>
-                  )}
-                  {activeOrders.length > 0 && (
-                    <span className={styles.orderCount}>
-                      {activeOrders.length} zamówień
-                    </span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-
-          <div className={styles.tableDetailsPanel}>
-            {selectedTable ? (
-              <div className={styles.tableDetails}>
-                <h4>Stolik {selectedTable.number}</h4>
-                
-                <div className={styles.tableInfo}>
-                  <p><strong>Status:</strong> {selectedTable.status === 'free' ? 'Wolny' : 'Zajęty'}</p>
-                  {selectedTable.customerName && (
-                    <p><strong>Klient:</strong> {selectedTable.customerName}</p>
-                  )}
-                </div>
-
-                <div className={styles.ordersSection}>
-                  <h5>📋 Aktywne zamówienia</h5>
-                  {orders
-                    .filter(order => order.tableId === selectedTable.id && (order.dataState ?? 1) === 1)
-                    .map(order => (
-                      <div key={order.id} className={styles.orderCard}>
-                        <div className={styles.orderHeader}>
-                          <span className={styles.orderStatus}>{order.status}</span>
-                          <span className={styles.orderTotal}>{order.total} zł</span>
-                        </div>
-                        <ul className={styles.orderItems}>
-                          {order.items.map(item => (
-                            <li key={item.id}>
-                              {item.name} x{item.quantity} - {item.price * item.quantity} zł
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    ))}
-                  
-                  {orders.filter(order => order.tableId === selectedTable.id && (order.dataState ?? 1) === 1).length === 0 && (
-                    <p className={styles.noOrders}>Brak aktywnych zamówień</p>
-                  )}
-                </div>
-
-                <div className={styles.tableActions}>
-                  <button 
-                    className={styles.addOrderButton}
-                    onClick={() => {
-                      setNewOrder({
-                        tableId: selectedTable.id,
-                        items: [],
-                        total: 0,
-                        status: 'pending',
-                        waiterName: 'Anna'
-                      });
-                    }}
-                  >
-                    ➕ Dodaj zamówienie
-                  </button>
-                  
-                  {orders.filter(order => order.tableId === selectedTable.id && (order.dataState ?? 1) === 1).length > 0 && (
-                    <button 
-                      className={styles.completeButton}
-                      onClick={completeAllOrders}
-                    >
-                      ✅ Zakończ wszystkie
-                    </button>
-                  )}
-                  
-                  <button 
-                    className={styles.closeButton}
-                    onClick={() => setSelectedTable(null)}
-                  >
-                    Zamknij
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className={styles.noTableSelected}>
-                <h4>Wybierz stolik</h4>
-                <p>Kliknij na stolik aby zobaczyć szczegóły i zarządzać zamówieniami</p>
-              </div>
-            )}
+        <div className={styles.sectionHeaderRow}>
+          <div className={styles.sectionAppName}>Quick Table</div>
+          <h2 className={styles.sectionTitle}>Zarządzanie Stolikami</h2>
+          <div className={styles.headerActions}>
+            <SettingsIcon />
           </div>
         </div>
 
-        {todayReservations.length > 0 && (
-          <div className={styles.upcomingReservations}>
-            <h3>📅 Dzisiejsze rezerwacje</h3>
-            <div className={styles.reservationsGrid}>
-              {todayReservations.map(reservation => (
-                <div key={reservation.id} className={styles.reservationCard}>
-                  <div className={styles.reservationHeader}>
-                    <h4>Stolik {reservation.tableNumber} - {reservation.reservationHour}</h4>
-                    <div className={styles.statusInfo}>
-                      <span className={`${styles.statusBadge} ${styles[reservation.status]}`}>
-                        {reservation.status === 'pending' && 'Oczekująca'}
-                        {reservation.status === 'accepted' && 'Zaakceptowana'}
-                        {reservation.status === 'rejected' && 'Odrzucona'}
-                        {reservation.status === 'cancelled' && 'Anulowana'}
-                      </span>
+        <div className={styles.tablesManagement}>
+          <div className={styles.tablesHeader}>
+            <h3>Lista Stolików ({tables.length})</h3>
+          </div>
+
+          <div className={styles.tablesGrid}>
+            {sortedTables.length === 0 ? (
+              <div className={styles.noTables}>
+                <p>Brak stolików.</p>
+              </div>
+            ) : (
+              sortedTables.map(table => {
+                const hasActiveOrders = isTableOccupied(table.id);
+                const nextReservation = getNextReservationForTable(table.number);
+                const allOrders = getAllOrdersForTable(table.id);
+                const allOrdersCompleted = allOrders.length > 0 && allOrders.every(order => order.status === 'done');
+                
+                let statusDotClass = styles.statusDotFree;
+                if (hasActiveOrders) {
+                  statusDotClass = styles.statusDotYellow;
+                } else if (table.status === 'occupied') {
+                  statusDotClass = styles.statusDotOccupied;
+                }
+                
+                return (
+                  <div 
+                    key={table.id} 
+                    className={styles.tableCard}
+                  >
+                    <div className={styles.tableCardHeader}>
+                      <div className={`${styles.statusDot} ${statusDotClass}`}></div>
+                      <h4>Stolik {table.number}</h4>
+                      <div className={styles.spacer}></div>
+                    </div>
+
+                    <div className={styles.tableCardBody}>
+                      {allOrders.length > 0 && (
+                        <div className={`${styles.tableActiveOrder} ${allOrdersCompleted ? styles.allOrdersCompleted : ''}`}>
+                          <button 
+                            className={styles.orderToggle}
+                            onClick={() => toggleOrderExpand(table.id)}
+                          >
+                            <span className={styles.orderIcon}>{allOrdersCompleted ? '✅' : '📋'}</span>
+                            <span className={styles.orderLabel}>Zamówienia ({allOrders.length})</span>
+                            <span className={styles.toggleIcon}>
+                              {expandedOrders.has(table.id) ? '▼' : '▶'}
+                            </span>
+                          </button>
+                          
+                          {expandedOrders.has(table.id) && (
+                            <div className={styles.orderDetails}>
+                              {allOrders.map((order, idx) => (
+                                <div key={order.id} className={styles.compactOrderCard}>
+                                  <div 
+                                    className={styles.compactOrderHeader}
+                                    onClick={() => toggleOrderDetailsExpand(order.id)}
+                                  >
+                                    <div className={styles.orderSummary}>
+                                      <span className={styles.orderNumber}>Zamówienie #{idx + 1}</span>
+                                      <span className={styles.orderTotal}>Suma: {order.total.toFixed(2)} zł</span>
+                                    </div>
+                                    <span className={styles.expandIcon}>
+                                      {expandedOrderDetails.has(order.id) ? '▼' : '▶'}
+                                    </span>
+                                  </div>
+
+                                  {expandedOrderDetails.has(order.id) && (
+                                    <div className={styles.orderExpandedContent}>
+                                      <div className={styles.orderItemsList}>
+                                        {order.items.map((item, itemIdx) => (
+                                          <div key={itemIdx} className={styles.orderItem}>
+                                            <span className={styles.itemQuantity}>{item.quantity}x</span>
+                                            <span className={styles.itemName}>{item.name}</span>
+                                            <span className={styles.itemPrice}>{(item.price * item.quantity).toFixed(2)} zł</span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  <div className={styles.orderActions}>
+                                    <button
+                                      className={`${styles.orderActionButton} ${order.status === 'done' ? styles.orderDone : styles.orderPending}`}
+                                      onClick={() => handleMarkOrderAsDone(order.id)}
+                                      disabled={order.status === 'done'}
+                                    >
+                                      {order.status === 'done' ? '✅ Wydane' : '📤 Wydaj klientowi'}
+                                    </button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {nextReservation && (
+                        <div className={styles.tableReservation}>
+                          <button 
+                            className={styles.reservationToggle}
+                            onClick={() => toggleReservationExpand(table.id)}
+                          >
+                            <span className={styles.calendarIcon}>📅</span>
+                            <span className={styles.reservationLabel}>Najbliższa rezerwacja</span>
+                            <span className={styles.toggleIcon}>
+                              {expandedReservations.has(table.id) ? '▼' : '▶'}
+                            </span>
+                          </button>
+                          
+                          {expandedReservations.has(table.id) && (
+                            <div className={styles.reservationDetails}>
+                              <p><strong>Data:</strong> {nextReservation.reservationDate}</p>
+                              <p><strong>Godzina:</strong> {nextReservation.reservationHour}</p>
+                              <p><strong>Klient:</strong> {nextReservation.customerName}</p>
+                              <p><strong>Liczba gości:</strong> {nextReservation.guests}</p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {allOrders.length === 0 && !nextReservation && (
+                        <div className={styles.tableInfo}>
+                          <p className={styles.infoText}>
+                            Brak zamówień i rezerwacji
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </div>
-                  <div className={styles.reservationDetails}>
-                    <p><strong>Klient:</strong> {reservation.customerName}</p>
-                    <p><strong>Telefon:</strong> {reservation.customerPhone}</p>
-                    <p><strong>Liczba gości:</strong> {reservation.guests}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
+                );
+              })
+            )}
           </div>
-        )}
+        </div>
 
         <div className={styles.backButtonContainer}>
           <button className={styles.backButton} onClick={() => setView(null)}>⬅ Wróć</button>

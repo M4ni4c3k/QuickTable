@@ -37,9 +37,6 @@ export default function MenuPage() {
     <div className={styles.menuPage}>
       <div className={styles.headerSection}>
         <h2>Nasze Menu</h2>
-        <button className={styles.backButton} onClick={() => navigate('/')}>
-          ⬅ Wróć do strony głównej
-        </button>
       </div>
 
       <ul className={styles.menuList}>
@@ -59,6 +56,12 @@ export default function MenuPage() {
           </li>
         ))}
       </ul>
+
+      <div className={styles.backButtonContainer}>
+        <button className={styles.backButton} onClick={() => navigate('/')}>
+          ⬅ Wróć do strony głównej
+        </button>
+      </div>
 
       {selectedItem && (
         <div

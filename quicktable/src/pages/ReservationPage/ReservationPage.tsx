@@ -336,6 +336,8 @@ export default function ReservationPage() {
           <p>Data: {selectedDate} o godzinie {selectedTime}</p>
           <p>Liczba gości: {guests}</p>
           <p>Potwierdzenie zostało wysłane na adres: {email}</p>
+        </div>
+        <div className={styles.backButtonContainer}>
           <button className={styles.backButton} onClick={() => navigate('/')}>
             ⬅ Wróć do strony głównej
           </button>
@@ -348,9 +350,6 @@ export default function ReservationPage() {
     <div className={styles.reservationPage}>
       <div className={styles.headerSection}>
         <h2>Rezerwacja Stolika</h2>
-        <button className={styles.backButton} onClick={() => navigate('/')}>
-          ⬅ Wróć do strony głównej
-        </button>
       </div>
 
       {/* Step Indicator */}
@@ -617,6 +616,12 @@ export default function ReservationPage() {
           </div>
         </form>
       )}
+
+      <div className={styles.backButtonContainer}>
+        <button className={styles.backButton} onClick={() => navigate('/')}>
+          ⬅ Wróć do strony głównej
+        </button>
+      </div>
     </div>
   );
 } 
