@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
-import { collection, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '../../firebase/firebaseConfig';
 import { useNavigate } from 'react-router-dom';
-import styles from './ReservationPage.module.css';
 import type { Table, Reservation, RestaurantHours } from '../../types/types';
+import { reservationAPI, tableAPI, hoursAPI } from '../../utils/apiClient';
+import Breadcrumb from '../../components/Breadcrumb/Breadcrumb';
+import { useAuth } from '../../hooks/useAuth';
 
 export default function ReservationPage() {
   const navigate = useNavigate();
+  const { userData } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -27,13 +28,8 @@ export default function ReservationPage() {
   useEffect(() => {
     const fetchRestaurantHours = async () => {
       try {
-        const hoursSnapshot = await getDocs(collection(db, 'restaurantHours'));
-        const hours = hoursSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-        })) as RestaurantHours[];
-        
-        setRestaurantHours(hours);
+        const hours = await hoursAPI.getAll();
+        setRestaurantHours(hours as RestaurantHours[]);
       } catch (error) {
         console.error('Błąd podczas pobierania godzin otwarcia:', error);
         setAvailableTimeSlots(generateDefaultTimeSlots());
@@ -42,6 +38,17 @@ export default function ReservationPage() {
 
     fetchRestaurantHours();
   }, []);
+
+  useEffect(() => {
+    if (userData) {
+      if (userData.displayName) {
+        setName(userData.displayName);
+      }
+      if (userData.email) {
+        setEmail(userData.email);
+      }
+    }
+  }, [userData]);
 
   const generateDefaultTimeSlots = () => {
     const slots = [];
@@ -77,16 +84,13 @@ export default function ReservationPage() {
 
   const fetchTableReservations = async (tableId: string, date: string) => {
     try {
-      const reservationsSnapshot = await getDocs(collection(db, 'reservations'));
-      const allReservations = reservationsSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as Reservation[];
+      const allReservations = await reservationAPI.getAll({ 
+        tableId, 
+        date,
+        dataState: 1 
+      });
 
-      const tableReservations = allReservations.filter(reservation => 
-        reservation.tableId === tableId && 
-        reservation.reservationDate === date &&
-        reservation.dataState === 1 &&
+      const tableReservations = (allReservations as Reservation[]).filter(reservation => 
         reservation.status !== 'rejected' &&
         reservation.status !== 'cancelled'
       );
@@ -164,13 +168,8 @@ export default function ReservationPage() {
   useEffect(() => {
     const fetchTables = async () => {
       try {
-        const querySnapshot = await getDocs(collection(db, 'tables'));
-        const allTables = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-        })) as Table[];
-
-        setTables(allTables);
+        const allTables = await tableAPI.getAll();
+        setTables(allTables as Table[]);
         setLoading(false);
       } catch (error) {
         console.error('Błąd podczas pobierania stolików:', error);
@@ -189,56 +188,22 @@ export default function ReservationPage() {
     }
   }, [selectedDate, selectedTime]);
 
-  // Update time slots when date changes
+  // Update time slots when date changes and check if restaurant is open
   useEffect(() => {
     if (selectedDate) {
-      updateAvailableTimeSlots(selectedDate);
+      const dayHours = restaurantHours.find(h => h.date === selectedDate);
+      if (dayHours && !dayHours.isOpen) {
+        setError('Restauracja jest zamknięta w wybranym dniu. Proszę wybrać inny termin.');
+        setAvailableTimeSlots([]);
+      } else {
+        setError('');
+        updateAvailableTimeSlots(selectedDate);
+      }
     }
   }, [selectedDate, restaurantHours]);
 
   const checkAvailability = async () => {
     if (!selectedDate || !selectedTime) return;
-
-    try {
-      // Check for existing reservations in the reservations collection
-      // const reservationsSnapshot = await getDocs(collection(db, 'reservations'));
-
-      // Calculate time range (selected time + 2 hours)
-      // const selectedDateTime = new Date(`${selectedDate}T${selectedTime}`);
-      // const endDateTime = new Date(selectedDateTime.getTime() + (2 * 60 * 60 * 1000)); // +2 hours
-
-      // Filter out tables that have conflicting reservations
-      // const filteredTables = tables.filter(table => {
-      //   // Check if this table has any active reservations that conflict
-      //   const conflictingReservation = existingReservations.find(reservation => 
-      //     reservation.tableId === table.id && 
-      //     reservation.dataState === 1 && // Only check active reservations
-      //     reservation.status !== 'rejected' && // Ignore rejected reservations
-      //     reservation.status !== 'cancelled' && // Ignore cancelled reservations
-      //     reservation.reservationDate === selectedDate
-      //   );
-      //
-      //   if (!conflictingReservation) return true;
-      //
-      //   // Check if the reservation time conflicts with our 2-hour window
-      //   const reservationDateTime = new Date(`${conflictingReservation.reservationDate}T${conflictingReservation.reservationHour}`);
-      //   const reservationEndTime = new Date(reservationDateTime.getTime() + (2 * 60 * 60 * 1000));
-      //
-      //   // Check for overlap
-      //   const hasConflict = (
-      //     (selectedDateTime >= reservationDateTime && selectedDateTime < reservationEndTime) ||
-      //     (endDateTime > reservationDateTime && endDateTime <= reservationEndTime) ||
-      //     (selectedDateTime <= reservationDateTime && endDateTime >= reservationEndTime)
-      //   );
-      //
-      //   return !hasConflict;
-      // });
-
-      
-    } catch (error) {
-      console.error('Błąd podczas sprawdzania dostępności:', error);
-      setError('Nie udało się sprawdzić dostępności stolików');
-    }
   };
 
   const handlePersonalInfoSubmit = (e: React.FormEvent) => {
@@ -253,11 +218,18 @@ export default function ReservationPage() {
     setCurrentStep(2);
   };
 
-  const handleDateTableSubmit = (e: React.FormEvent) => {
+  const handleDateTableSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!selectedDate || !selectedTable) {
       setError('Proszę wybrać datę i stolik');
+      return;
+    }
+
+    // Check if restaurant is open on selected date
+    const dayHours = restaurantHours.find(h => h.date === selectedDate);
+    if (dayHours && !dayHours.isOpen) {
+      setError('Restauracja jest zamknięta w wybranym dniu. Proszę wybrać inny termin.');
       return;
     }
 
@@ -277,10 +249,7 @@ export default function ReservationPage() {
     }
 
     try {
-      const reservationDateTime = `${selectedDate} ${selectedTime}`;
-      
-      // Create a new reservation document
-      const reservationData = {
+      await reservationAPI.create({
         tableId: selectedTable.id,
         tableNumber: selectedTable.number,
         customerName: name,
@@ -289,20 +258,13 @@ export default function ReservationPage() {
         guests: guests,
         reservationDate: selectedDate,
         reservationHour: selectedTime,
-        reservationTime: reservationDateTime,
-        status: 'pending',
-        dataState: 1, // Active reservation
-        isAccepted: false, // Not accepted yet
-        createdAt: serverTimestamp(),
-      };
-
-      await addDoc(collection(db, 'reservations'), reservationData);
+      });
 
       setReservationSaved(true);
       setError('');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Błąd przy zapisie rezerwacji:', error);
-      setError('Nie udało się zapisać rezerwacji. Spróbuj ponownie.');
+      setError(error.message || 'Nie udało się zapisać rezerwacji. Spróbuj ponownie.');
     }
   };
 
@@ -319,9 +281,9 @@ export default function ReservationPage() {
 
   if (loading) {
     return (
-      <div className={styles.reservationPage}>
-        <div className={styles.loadingMessage}>
-          <p>Ładowanie dostępnych stolików...</p>
+      <div className="w-full">
+        <div className="text-center py-12">
+          <p className="text-lg text-gray-600">Ładowanie dostępnych stolików...</p>
         </div>
       </div>
     );
@@ -329,16 +291,26 @@ export default function ReservationPage() {
 
   if (reservationSaved) {
     return (
-      <div className={styles.reservationPage}>
-        <div className={styles.successMessage}>
-          <h3>✅ Rezerwacja została zapisana!</h3>
-          <p>Dziękujemy za rezerwację stolika {selectedTable?.number}.</p>
-          <p>Data: {selectedDate} o godzinie {selectedTime}</p>
-          <p>Liczba gości: {guests}</p>
+      <div className="w-full">
+        <Breadcrumb 
+          items={[
+            { label: 'Strona główna', path: '/client' },
+            { label: 'Rezerwacja', path: '/reservation' },
+            { label: 'Potwierdzenie' }
+          ]}
+        />
+        <div className="bg-green-100 border border-green-400 text-green-700 rounded-lg p-8 mb-6">
+          <h3 className="text-2xl font-bold mb-4">✅ Rezerwacja została zapisana!</h3>
+          <p className="mb-2">Dziękujemy za rezerwację stolika {selectedTable?.number}.</p>
+          <p className="mb-2">Data: {selectedDate} o godzinie {selectedTime}</p>
+          <p className="mb-2">Liczba gości: {guests}</p>
           <p>Potwierdzenie zostało wysłane na adres: {email}</p>
         </div>
-        <div className={styles.backButtonContainer}>
-          <button className={styles.backButton} onClick={() => navigate('/')}>
+        <div className="flex justify-center">
+          <button 
+            className="px-6 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
+            onClick={() => navigate('/')}
+          >
             ⬅ Wróć do strony głównej
           </button>
         </div>
@@ -347,80 +319,93 @@ export default function ReservationPage() {
   }
 
   return (
-    <div className={styles.reservationPage}>
-      <div className={styles.headerSection}>
-        <h2>Rezerwacja Stolika</h2>
+    <div className="w-full">
+      <Breadcrumb 
+        items={[
+          { label: 'Strona główna', path: '/client' },
+          { label: 'Rezerwacja', path: '/reservation' },
+          ...(currentStep >= 2 ? [{ label: 'Wybór stolika' }] : []),
+          ...(currentStep >= 3 ? [{ label: 'Wybór godziny' }] : [])
+        ]}
+      />
+      <div className="mb-6">
+        <h2 className="text-3xl font-bold text-gray-800">Rezerwacja Stolika</h2>
       </div>
 
       {/* Step Indicator */}
-      <div className={styles.stepIndicator}>
-        <div className={`${styles.step} ${currentStep >= 1 ? styles.active : ''}`}>
-          <span className={styles.stepNumber}>1</span>
-          <span className={styles.stepLabel}>Dane kontaktowe</span>
+      <div className="flex justify-between items-center mb-8 max-w-2xl">
+        <div className={`flex flex-col items-center ${currentStep >= 1 ? 'text-primary' : 'text-gray-400'}`}>
+          <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${currentStep >= 1 ? 'bg-primary text-white' : 'bg-gray-200 text-gray-600'}`}>
+            1
+          </div>
+          <span className="mt-2 text-sm font-medium">Dane kontaktowe</span>
         </div>
-        <div className={`${styles.step} ${currentStep >= 2 ? styles.active : ''}`}>
-          <span className={styles.stepNumber}>2</span>
-          <span className={styles.stepLabel}>Data i stolik</span>
+        <div className={`flex flex-col items-center ${currentStep >= 2 ? 'text-primary' : 'text-gray-400'}`}>
+          <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${currentStep >= 2 ? 'bg-primary text-white' : 'bg-gray-200 text-gray-600'}`}>
+            2
+          </div>
+          <span className="mt-2 text-sm font-medium">Data i stolik</span>
         </div>
-        <div className={`${styles.step} ${currentStep >= 3 ? styles.active : ''}`}>
-          <span className={styles.stepNumber}>3</span>
-          <span className={styles.stepLabel}>Wybór godziny</span>
+        <div className={`flex flex-col items-center ${currentStep >= 3 ? 'text-primary' : 'text-gray-400'}`}>
+          <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${currentStep >= 3 ? 'bg-primary text-white' : 'bg-gray-200 text-gray-600'}`}>
+            3
+          </div>
+          <span className="mt-2 text-sm font-medium">Wybór godziny</span>
         </div>
       </div>
 
       {currentStep === 1 && (
-        <form onSubmit={handlePersonalInfoSubmit} className={styles.reservationForm}>
-          <div className={styles.formSection}>
-            <h3>📋 Dane kontaktowe</h3>
-            <div className={styles.formRow}>
-              <label>
-                Imię i nazwisko:
+        <form onSubmit={handlePersonalInfoSubmit} className="bg-white rounded-lg shadow-md p-6 space-y-4 mb-6">
+          <div>
+            <h3 className="text-xl font-bold text-gray-800 mb-4">📋 Dane kontaktowe</h3>
+            <div className="space-y-4">
+              <label className="block">
+                <span className="block mb-2 font-semibold text-gray-700">Imię i nazwisko:</span>
                 <input
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   required
                   placeholder="Wprowadź swoje imię i nazwisko"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                 />
               </label>
-            </div>
-            
-            <div className={styles.formRow}>
-              <label>
-                Email:
+              
+              <label className="block">
+                <span className="block mb-2 font-semibold text-gray-700">Email:</span>
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   placeholder="Wprowadź swój email"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                 />
               </label>
-            </div>
-            
-            <div className={styles.formRow}>
-              <label>
-                Telefon:
+              
+              <label className="block">
+                <span className="block mb-2 font-semibold text-gray-700">Telefon:</span>
                 <input
                   type="tel"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   required
                   placeholder="Wprowadź swój numer telefonu"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                 />
               </label>
             </div>
           </div>
 
           {error && (
-            <div className={styles.errorMessage}>
+            <div className="p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
               <p>{error}</p>
             </div>
           )}
 
           <button 
             type="submit" 
-            className={styles.submitButton}
+            className="w-full px-6 py-3 bg-primary text-white rounded-lg hover:bg-blue-600 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={!name || !email || !phone}
           >
             ➡️ Przejdź do wyboru daty i stolika
@@ -429,12 +414,12 @@ export default function ReservationPage() {
       )}
 
       {currentStep === 2 && (
-        <form onSubmit={handleDateTableSubmit} className={styles.reservationForm}>
-          <div className={styles.formSection}>
-            <h3>📅 Szczegóły rezerwacji</h3>
-            <div className={styles.formRow}>
-              <label>
-                Data:
+        <form onSubmit={handleDateTableSubmit} className="bg-white rounded-lg shadow-md p-6 space-y-4 mb-6">
+          <div>
+            <h3 className="text-xl font-bold text-gray-800 mb-4">📅 Szczegóły rezerwacji</h3>
+            <div className="space-y-4">
+              <label className="block">
+                <span className="block mb-2 font-semibold text-gray-700">Data:</span>
                 <input
                   type="date"
                   value={selectedDate}
@@ -442,13 +427,12 @@ export default function ReservationPage() {
                   required
                   min={getMinDate()}
                   max={getMaxDate()}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                 />
               </label>
-            </div>
-            
-            <div className={styles.formRow}>
-              <label>
-                Stolik:
+              
+              <label className="block">
+                <span className="block mb-2 font-semibold text-gray-700">Stolik:</span>
                 <select
                   value={selectedTable?.id || ''}
                   onChange={(e) => {
@@ -456,6 +440,7 @@ export default function ReservationPage() {
                     setSelectedTable(table || null);
                   }}
                   required
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                 >
                   <option value="">-- Wybierz stolik --</option>
                   {tables.map((table) => (
@@ -465,15 +450,14 @@ export default function ReservationPage() {
                   ))}
                 </select>
               </label>
-            </div>
-            
-            <div className={styles.formRow}>
-              <label>
-                Liczba gości:
+              
+              <label className="block">
+                <span className="block mb-2 font-semibold text-gray-700">Liczba gości:</span>
                 <select
                   value={guests}
                   onChange={(e) => setGuests(Number(e.target.value))}
                   required
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                 >
                   {[1, 2, 3, 4, 5, 6, 7, 8].map(num => (
                     <option key={num} value={num}>
@@ -486,22 +470,22 @@ export default function ReservationPage() {
           </div>
 
           {error && (
-            <div className={styles.errorMessage}>
+            <div className="p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
               <p>{error}</p>
             </div>
           )}
 
-          <div className={styles.buttonGroup}>
+          <div className="flex gap-4">
             <button 
               type="button" 
-              className={styles.backStepButton}
+              className="flex-1 px-6 py-3 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors font-semibold"
               onClick={() => setCurrentStep(1)}
             >
               ⬅️ Wstecz
             </button>
             <button 
               type="submit" 
-              className={styles.submitButton}
+              className="flex-1 px-6 py-3 bg-primary text-white rounded-lg hover:bg-blue-600 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={!selectedDate || !selectedTable}
             >
               ➡️ Przejdź do wyboru godziny
@@ -511,21 +495,21 @@ export default function ReservationPage() {
       )}
 
       {currentStep === 3 && (
-        <form onSubmit={handleFinalSubmit} className={styles.reservationForm}>
-          <div className={styles.formSection}>
-            <h3>🕐 Wybór godziny rezerwacji</h3>
-            <p className={styles.tableInfo}>
+        <form onSubmit={handleFinalSubmit} className="bg-white rounded-lg shadow-md p-6 space-y-4 mb-6">
+          <div>
+            <h3 className="text-xl font-bold text-gray-800 mb-4">🕐 Wybór godziny rezerwacji</h3>
+            <p className="mb-4 text-gray-600 font-medium">
               Stolik {selectedTable?.number} - {selectedDate}
             </p>
             
             {tableReservations.length > 0 && (
-              <div className={styles.existingReservations}>
-                <h4>Istniejące rezerwacje na ten stolik:</h4>
-                <div className={styles.reservationList}>
+              <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                <h4 className="font-bold text-gray-800 mb-3">Istniejace rezerwacje na ten stolik:</h4>
+                <div className="flex flex-wrap gap-2">
                   {tableReservations.map(reservation => (
-                    <div key={reservation.id} className={styles.existingReservation}>
-                      <span className={styles.reservationTime}>{reservation.reservationHour}</span>
-                      <span className={styles.reservationStatus}>
+                    <div key={reservation.id} className="px-3 py-1 bg-white rounded border border-gray-300">
+                      <span className="font-medium">{reservation.reservationHour}</span>
+                      <span className="ml-2 text-sm text-gray-600">
                         {reservation.status === 'pending' && 'Oczekująca'}
                         {reservation.status === 'accepted' && 'Zaakceptowana'}
                       </span>
@@ -535,26 +519,26 @@ export default function ReservationPage() {
               </div>
             )}
 
-            <div className={styles.timeSelection}>
-              <h4>Dostępne godziny:</h4>
+            <div>
+              <h4 className="font-bold text-gray-800 mb-3">Dostępne godziny:</h4>
               
               {getBlockedHoursInfo(selectedDate).length > 0 && (
-                <div className={styles.blockedHoursInfo}>
-                  <h5>🚫 Zablokowane godziny:</h5>
-                  <div className={styles.blockedHoursList}>
+                <div className="mb-4 p-4 bg-yellow-50 border border-yellow-300 rounded-lg">
+                  <h5 className="font-bold text-yellow-800 mb-2">🚫 Zablokowane godziny:</h5>
+                  <div className="flex flex-wrap gap-2 mb-2">
                     {getBlockedHoursInfo(selectedDate).map((blockedRange, index) => (
-                      <span key={index} className={styles.blockedRange}>
+                      <span key={index} className="px-2 py-1 bg-yellow-200 rounded text-yellow-800 text-sm">
                         {blockedRange}
                       </span>
                     ))}
                   </div>
-                  <p className={styles.blockedHoursNote}>
+                  <p className="text-sm text-yellow-700">
                     Te godziny są niedostępne do rezerwacji.
                   </p>
                 </div>
               )}
               
-              <div className={styles.timeSlotsGrid}>
+              <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-3 mb-4">
                 {availableTimeSlots.map((timeSlot) => {
                   const isBlocked = isTimeSlotBlocked(timeSlot);
                   const hasPending = hasPendingConflict(timeSlot);
@@ -564,27 +548,30 @@ export default function ReservationPage() {
                     <button
                       key={timeSlot}
                       type="button"
-                      className={`${styles.timeSlot} ${isBlocked ? styles.blocked : ''} ${hasPending ? styles.pending : ''} ${selectedTime === timeSlot ? styles.selected : ''}`}
+                      className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                        isBlocked 
+                          ? 'bg-red-100 text-red-700 cursor-not-allowed border border-red-300' 
+                          : hasPending 
+                          ? 'bg-yellow-100 text-yellow-700 border border-yellow-300 hover:bg-yellow-200' 
+                          : selectedTime === timeSlot
+                          ? 'bg-primary text-white border border-blue-600'
+                          : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                      }`}
                       onClick={() => !isBlocked && setSelectedTime(timeSlot)}
                       disabled={isBlocked}
                     >
-                      {timeSlot}
-                      {isBlocked && <span className={styles.blockedLabel}>Zajęte</span>}
-                      {hasPending && !isBlocked && (
-                        <span className={styles.pendingLabel}>Oczekująca</span>
-                      )}
-                      {reservationStatus && (
-                        <span className={styles.reservationInfo}>
-                          {reservationStatus.customerName}
-                        </span>
-                      )}
+                      <div className="text-center">
+                        <div>{timeSlot}</div>
+                        {isBlocked && <div className="text-xs mt-1">Zajęte</div>}
+                        {hasPending && !isBlocked && <div className="text-xs mt-1">Oczekująca</div>}
+                      </div>
                     </button>
                   );
                 })}
               </div>
               
               {hasPendingConflict(selectedTime) && (
-                <div className={styles.pendingWarning}>
+                <div className="p-4 bg-yellow-100 border border-yellow-400 text-yellow-700 rounded-lg mb-4">
                   <p>⚠️ Uwaga: Istnieje oczekująca rezerwacja na ten czas. 
                   Twoja rezerwacja może nie zostać zaakceptowana jeśli tamta zostanie potwierdzona.</p>
                 </div>
@@ -593,22 +580,22 @@ export default function ReservationPage() {
           </div>
 
           {error && (
-            <div className={styles.errorMessage}>
+            <div className="p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
               <p>{error}</p>
             </div>
           )}
 
-          <div className={styles.buttonGroup}>
+          <div className="flex gap-4">
             <button 
               type="button" 
-              className={styles.backStepButton}
+              className="flex-1 px-6 py-3 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors font-semibold"
               onClick={() => setCurrentStep(2)}
             >
               ⬅️ Wstecz
             </button>
             <button 
               type="submit" 
-              className={styles.submitButton}
+              className="flex-1 px-6 py-3 bg-primary text-white rounded-lg hover:bg-blue-600 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={!selectedTime}
             >
               🎯 Zarezerwuj stolik
@@ -617,11 +604,14 @@ export default function ReservationPage() {
         </form>
       )}
 
-      <div className={styles.backButtonContainer}>
-        <button className={styles.backButton} onClick={() => navigate('/')}>
+      <div className="flex justify-center">
+        <button 
+          className="px-6 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
+          onClick={() => navigate('/')}
+        >
           ⬅ Wróć do strony głównej
         </button>
       </div>
     </div>
   );
-} 
+}

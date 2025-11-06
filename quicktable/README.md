@@ -83,9 +83,37 @@ A comprehensive restaurant management system built with React, TypeScript, and F
    node src/scripts/setup-reservations-collection.js
    ```
 
-6. **Start development server**
+6. **Start all services and frontend**
+   
+   **Option 1: One Command (Recommended)**
    ```bash
+   npm start
+   ```
+   or
+   ```bash
+   npm run start:all
+   ```
+   
+   This will start all microservices and the frontend automatically.
+   
+   **Option 2: Using Batch File (Windows)**
+   ```bash
+   start-all.bat
+   ```
+   
+   **Option 3: Manual Start**
+   ```bash
+   # Start all services
+   npm run services:dev
+   
+   # In another terminal, start frontend
    npm run dev
+   ```
+   
+   **Option 4: Docker (All Services)**
+   ```bash
+   npm run docker:up
+   npm run dev  # Frontend in separate terminal
    ```
 
 ## Database Structure

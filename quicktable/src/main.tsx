@@ -13,6 +13,8 @@ import OrderPage from './pages/OrderPage/OrderPage.tsx'
 import MenuPage from './pages/MenuPage/MenuPage.tsx'
 import KitchenPage from './pages/KitchenPage/KitchenPage.tsx'
 import ReservationPage from './pages/ReservationPage/ReservationPage.tsx'
+import UserPage from './pages/UserPage/UserPage.tsx'
+import ProtectedRoute from './components/ProtectedRoute/ProtectedRoute.tsx'
 
 const router = createBrowserRouter([
   {
@@ -26,15 +28,27 @@ const router = createBrowserRouter([
       },
       {
         path: 'admin',
-        element: <AdminPage />
+        element: (
+          <ProtectedRoute allowedRoles={['admin', 'manager']}>
+            <AdminPage />
+          </ProtectedRoute>
+        )
       },
       {
         path: 'waiter',
-        element: <WaiterPage />
+        element: (
+          <ProtectedRoute allowedRoles={['admin', 'manager', 'waiter']}>
+            <WaiterPage />
+          </ProtectedRoute>
+        )
       },
       {
         path: 'client',
-        element: <ClientPage />
+        element: (
+          <ProtectedRoute allowedRoles={['admin', 'manager', 'client']}>
+            <ClientPage />
+          </ProtectedRoute>
+        )
       },
       {
         path: 'login',
@@ -42,7 +56,11 @@ const router = createBrowserRouter([
       },
       {
         path: 'order',
-        element: <OrderPage />
+        element: (
+          <ProtectedRoute allowedRoles={['admin', 'manager', 'client']}>
+            <OrderPage />
+          </ProtectedRoute>
+        )
       },
       {
         path: 'menu',
@@ -50,11 +68,19 @@ const router = createBrowserRouter([
       },
       {
         path: 'kitchen',
-        element: <KitchenPage />
+        element: (
+          <ProtectedRoute allowedRoles={['admin', 'manager', 'kitchen']}>
+            <KitchenPage />
+          </ProtectedRoute>
+        )
       },
       {
         path: 'reservation',
         element: <ReservationPage />
+      },
+      {
+        path: 'profile',
+        element: <UserPage />
       }
     ]
   }

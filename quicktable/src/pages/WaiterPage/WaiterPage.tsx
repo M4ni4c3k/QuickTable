@@ -1,15 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  collection,
-  doc,
-  onSnapshot,
-  updateDoc,
-} from 'firebase/firestore';
 import type { Table, Order, Reservation } from '../../types/types';
-import { db } from '../../firebase/firebaseConfig';
-import styles from './WaiterPage.module.css';
 import SettingsIcon from '../../components/SettingsIcon/SettingsIcon';
+import { tableAPI, orderAPI, reservationAPI } from '../../utils/apiClient';
+import { connectRealtime, disconnectRealtime } from '../../utils/realtimeClient';
+import Breadcrumb from '../../components/Breadcrumb/Breadcrumb';
 
 export default function WaiterPage() {
   const [tables, setTables] = useState<Table[]>([]);
@@ -28,47 +23,45 @@ export default function WaiterPage() {
   const navigate = useNavigate();
 
 
-  // Real-time tables listener
-  useEffect(() => {
-    const tablesRef = collection(db, 'tables');
-    const unsubscribe = onSnapshot(tablesRef, (snapshot) => {
-      const tablesData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Table[];
-      setTables(tablesData);
+  // Fetch data with polling for real-time-like updates
+  const fetchData = async () => {
+    try {
+      const [tablesData, ordersData, reservationsData] = await Promise.all([
+        tableAPI.getAll(),
+        orderAPI.getAll({ dataState: 1 }),
+        reservationAPI.getAll({ dataState: 1 }),
+      ]);
+      
+      setTables(tablesData as Table[]);
+      setOrders(ordersData as Order[]);
+      setReservations(reservationsData as Reservation[]);
       setLoading(false);
-    });
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      setLoading(false);
+    }
+  };
 
-    return () => unsubscribe();
-  }, []);
-
-  // Real-time orders listener
   useEffect(() => {
-    const ordersRef = collection(db, 'orders');
-    const unsubscribe = onSnapshot(ordersRef, (snapshot) => {
-      const ordersData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Order[];
-      setOrders(ordersData);
-    });
+    fetchData();
 
-    return () => unsubscribe();
-  }, []);
+    // Connect to real-time service for live updates
+    connectRealtime({
+      onOrderUpdate: () => fetchData(),
+      onTableUpdate: () => fetchData(),
+      onReservationUpdate: () => fetchData(),
+      onConnect: () => {
+        console.log('Waiter connected to real-time service');
+      },
+    }, 'waiter');
 
-  // Real-time reservations listener
-  useEffect(() => {
-    const reservationsRef = collection(db, 'reservations');
-    const unsubscribe = onSnapshot(reservationsRef, (snapshot) => {
-      const reservationsData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Reservation[];
-      setReservations(reservationsData);
-    });
-
-    return () => unsubscribe();
+    // Fallback polling every 5 seconds
+    const interval = setInterval(fetchData, 5000);
+    
+    return () => {
+      clearInterval(interval);
+      disconnectRealtime();
+    };
   }, []);
 
   const isTableOccupied = (tableId: string) => {
@@ -140,9 +133,7 @@ export default function WaiterPage() {
 
   const handleMarkOrderAsDone = async (orderId: string) => {
     try {
-      await updateDoc(doc(db, 'orders', orderId), { 
-        status: 'done'
-      });
+      await orderAPI.updateStatus(orderId, 'done');
     } catch (error) {
       console.error('Error marking order as done:', error);
       alert('Błąd podczas oznaczania zamówienia jako wykonane');
@@ -202,24 +193,42 @@ export default function WaiterPage() {
     setCurrentMonth(newMonth);
   };
 
-  if (loading) return <div className={styles.loading}>Ładowanie danych...</div>;
+  if (loading) return <div className="text-center py-12 text-gray-600">Ładowanie danych...</div>;
 
   if (!view) {
     return (
-      <div className={styles.waiterContainer}>
-        <div className={styles.headerRow}>
-          <div className={styles.appName}>Quick Table</div>
-          <h2 className={styles.pageTitle}>Panel Kelnera</h2>
-          <div className={styles.headerActions}>
-            <SettingsIcon />
-          </div>
+      <div className="w-full min-h-screen bg-gray-50 p-4">
+        <Breadcrumb 
+          items={[
+            { label: 'Panel Kelnera', path: '/waiter' }
+          ]}
+        />
+        <div className="mb-6">
+          <h2 className="text-4xl font-bold text-gray-800 bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent text-center">
+            Panel Kelnera
+          </h2>
         </div>
-        <div className={styles.selectionPanel}>
-          <button className={styles.bigButton} onClick={() => setView('tables')}>🪑 Zarządzanie Stolikami</button>
-          <button className={styles.bigButton} onClick={() => setView('reservations')}>📅 Rezerwacje</button>
+        <div className="flex flex-col gap-4 mb-6 max-w-md mx-auto">
+          <button 
+            className="px-8 py-6 bg-primary text-white rounded-lg hover:bg-blue-600 transition-colors font-semibold text-lg shadow-md"
+            onClick={() => setView('tables')}
+          >
+            🪑 Zarządzanie Stolikami
+          </button>
+          <button 
+            className="px-8 py-6 bg-secondary text-white rounded-lg hover:bg-green-600 transition-colors font-semibold text-lg shadow-md"
+            onClick={() => setView('reservations')}
+          >
+            📅 Rezerwacje
+          </button>
         </div>
-        <div className={styles.backButtonContainer}>
-          <button className={styles.backButton} onClick={() => navigate('/')}>⬅ Wróć</button>
+        <div className="flex justify-center">
+          <button 
+            className="px-6 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
+            onClick={() => navigate('/')}
+          >
+            ⬅ Wróć
+          </button>
         </div>
       </div>
     );
@@ -229,23 +238,27 @@ export default function WaiterPage() {
     const sortedTables = [...tables].sort((a, b) => a.number - b.number);
 
     return (
-      <div className={styles.waiterContainer}>
-        <div className={styles.sectionHeaderRow}>
-          <div className={styles.sectionAppName}>Quick Table</div>
-          <h2 className={styles.sectionTitle}>Zarządzanie Stolikami</h2>
-          <div className={styles.headerActions}>
-            <SettingsIcon />
-          </div>
+      <div className="w-full min-h-screen bg-gray-50 p-4">
+        <Breadcrumb 
+          items={[
+            { label: 'Panel Kelnera', path: '/waiter', onClick: () => setView(null) },
+            { label: 'Zarządzanie Stolikami' }
+          ]}
+        />
+        <div className="mb-6">
+          <h2 className="text-4xl font-bold text-gray-800 bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent text-center">
+            Zarządzanie Stolikami
+          </h2>
         </div>
 
-        <div className={styles.tablesManagement}>
-          <div className={styles.tablesHeader}>
-            <h3>Lista Stolików ({tables.length})</h3>
+        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+          <div className="mb-4">
+            <h3 className="text-xl font-bold text-gray-800">Lista Stolików ({tables.length})</h3>
           </div>
 
-          <div className={styles.tablesGrid}>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {sortedTables.length === 0 ? (
-              <div className={styles.noTables}>
+              <div className="col-span-full text-center py-8 text-gray-600">
                 <p>Brak stolików.</p>
               </div>
             ) : (
@@ -255,72 +268,77 @@ export default function WaiterPage() {
                 const allOrders = getAllOrdersForTable(table.id);
                 const allOrdersCompleted = allOrders.length > 0 && allOrders.every(order => order.status === 'done');
                 
-                let statusDotClass = styles.statusDotFree;
+                let statusDotColor = 'bg-green-500';
                 if (hasActiveOrders) {
-                  statusDotClass = styles.statusDotYellow;
+                  statusDotColor = 'bg-yellow-500';
                 } else if (table.status === 'occupied') {
-                  statusDotClass = styles.statusDotOccupied;
+                  statusDotColor = 'bg-red-500';
                 }
                 
                 return (
                   <div 
                     key={table.id} 
-                    className={styles.tableCard}
+                    className="bg-white border border-gray-200 rounded-lg shadow-md p-4"
                   >
-                    <div className={styles.tableCardHeader}>
-                      <div className={`${styles.statusDot} ${statusDotClass}`}></div>
-                      <h4>Stolik {table.number}</h4>
-                      <div className={styles.spacer}></div>
+                    <div className="flex items-center gap-2 mb-4 pb-2 border-b">
+                      <div className={`w-3 h-3 rounded-full ${statusDotColor}`}></div>
+                      <h4 className="text-lg font-bold text-gray-800">Stolik {table.number}</h4>
+                      <div className="flex-1"></div>
                     </div>
 
-                    <div className={styles.tableCardBody}>
+                    <div className="space-y-3">
                       {allOrders.length > 0 && (
-                        <div className={`${styles.tableActiveOrder} ${allOrdersCompleted ? styles.allOrdersCompleted : ''}`}>
+                        <div className={`${allOrdersCompleted ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'} border rounded-lg p-3`}>
                           <button 
-                            className={styles.orderToggle}
+                            className="w-full flex items-center justify-between text-left"
                             onClick={() => toggleOrderExpand(table.id)}
                           >
-                            <span className={styles.orderIcon}>{allOrdersCompleted ? '✅' : '📋'}</span>
-                            <span className={styles.orderLabel}>Zamówienia ({allOrders.length})</span>
-                            <span className={styles.toggleIcon}>
+                            <div className="flex items-center gap-2">
+                              <span>{allOrdersCompleted ? '✅' : '📋'}</span>
+                              <span className="font-medium text-gray-700">Zamówienia ({allOrders.length})</span>
+                            </div>
+                            <span className="text-gray-500">
                               {expandedOrders.has(table.id) ? '▼' : '▶'}
                             </span>
                           </button>
                           
                           {expandedOrders.has(table.id) && (
-                            <div className={styles.orderDetails}>
+                            <div className="mt-3 space-y-2">
                               {allOrders.map((order, idx) => (
-                                <div key={order.id} className={styles.compactOrderCard}>
+                                <div key={order.id} className="bg-white rounded border border-gray-200 p-3">
                                   <div 
-                                    className={styles.compactOrderHeader}
+                                    className="flex items-center justify-between cursor-pointer mb-2"
                                     onClick={() => toggleOrderDetailsExpand(order.id)}
                                   >
-                                    <div className={styles.orderSummary}>
-                                      <span className={styles.orderNumber}>Zamówienie #{idx + 1}</span>
-                                      <span className={styles.orderTotal}>Suma: {order.total.toFixed(2)} zł</span>
+                                    <div className="flex flex-col">
+                                      <span className="font-semibold text-gray-800">Zamówienie #{idx + 1}</span>
+                                      <span className="text-sm text-gray-600">Suma: {order.total.toFixed(2)} zł</span>
                                     </div>
-                                    <span className={styles.expandIcon}>
+                                    <span className="text-gray-500">
                                       {expandedOrderDetails.has(order.id) ? '▼' : '▶'}
                                     </span>
                                   </div>
 
                                   {expandedOrderDetails.has(order.id) && (
-                                    <div className={styles.orderExpandedContent}>
-                                      <div className={styles.orderItemsList}>
+                                    <div className="mt-2 pt-2 border-t border-gray-200">
+                                      <div className="space-y-1">
                                         {order.items.map((item, itemIdx) => (
-                                          <div key={itemIdx} className={styles.orderItem}>
-                                            <span className={styles.itemQuantity}>{item.quantity}x</span>
-                                            <span className={styles.itemName}>{item.name}</span>
-                                            <span className={styles.itemPrice}>{(item.price * item.quantity).toFixed(2)} zł</span>
+                                          <div key={itemIdx} className="flex justify-between text-sm text-gray-700">
+                                            <span><span className="font-medium">{item.quantity}x</span> {item.name}</span>
+                                            <span className="font-semibold">{(item.price * item.quantity).toFixed(2)} zł</span>
                                           </div>
                                         ))}
                                       </div>
                                     </div>
                                   )}
 
-                                  <div className={styles.orderActions}>
+                                  <div className="mt-2">
                                     <button
-                                      className={`${styles.orderActionButton} ${order.status === 'done' ? styles.orderDone : styles.orderPending}`}
+                                      className={`w-full px-4 py-2 rounded-lg font-semibold transition-colors ${
+                                        order.status === 'done' 
+                                          ? 'bg-gray-200 text-gray-600 cursor-not-allowed' 
+                                          : 'bg-primary text-white hover:bg-blue-600'
+                                      }`}
                                       onClick={() => handleMarkOrderAsDone(order.id)}
                                       disabled={order.status === 'done'}
                                     >
@@ -335,20 +353,22 @@ export default function WaiterPage() {
                       )}
 
                       {nextReservation && (
-                        <div className={styles.tableReservation}>
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                           <button 
-                            className={styles.reservationToggle}
+                            className="w-full flex items-center justify-between text-left"
                             onClick={() => toggleReservationExpand(table.id)}
                           >
-                            <span className={styles.calendarIcon}>📅</span>
-                            <span className={styles.reservationLabel}>Najbliższa rezerwacja</span>
-                            <span className={styles.toggleIcon}>
+                            <div className="flex items-center gap-2">
+                              <span>📅</span>
+                              <span className="font-medium text-gray-700">Najbliższa rezerwacja</span>
+                            </div>
+                            <span className="text-gray-500">
                               {expandedReservations.has(table.id) ? '▼' : '▶'}
                             </span>
                           </button>
                           
                           {expandedReservations.has(table.id) && (
-                            <div className={styles.reservationDetails}>
+                            <div className="mt-3 space-y-1 text-sm text-gray-700">
                               <p><strong>Data:</strong> {nextReservation.reservationDate}</p>
                               <p><strong>Godzina:</strong> {nextReservation.reservationHour}</p>
                               <p><strong>Klient:</strong> {nextReservation.customerName}</p>
@@ -359,10 +379,8 @@ export default function WaiterPage() {
                       )}
 
                       {allOrders.length === 0 && !nextReservation && (
-                        <div className={styles.tableInfo}>
-                          <p className={styles.infoText}>
-                            Brak zamówień i rezerwacji
-                          </p>
+                        <div className="text-center py-4 text-gray-500 text-sm">
+                          <p>Brak zamówień i rezerwacji</p>
                         </div>
                       )}
                     </div>
@@ -373,8 +391,13 @@ export default function WaiterPage() {
           </div>
         </div>
 
-        <div className={styles.backButtonContainer}>
-          <button className={styles.backButton} onClick={() => setView(null)}>⬅ Wróć</button>
+        <div className="flex justify-center">
+          <button 
+            className="px-6 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
+            onClick={() => setView(null)}
+          >
+            ⬅ Wróć
+          </button>
         </div>
       </div>
     );
@@ -384,38 +407,48 @@ export default function WaiterPage() {
     const dayReservations = getReservationsForDate(selectedDate, showArchivedReservations);
     
     return (
-      <div className={styles.waiterContainer}>
-        <h2 className={styles.pageTitle}>Rezerwacje</h2>
+      <div className="w-full min-h-screen bg-gray-50 p-4">
+        <Breadcrumb 
+          items={[
+            { label: 'Panel Kelnera', path: '/waiter', onClick: () => setView(null) },
+            { label: 'Rezerwacje' }
+          ]}
+        />
+        <div className="mb-6">
+          <h2 className="text-4xl font-bold text-gray-800 bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent text-center">
+            Rezerwacje
+          </h2>
+        </div>
         
-        <div className={styles.calendarLayout}>
-          <div className={styles.calendarContainer}>
-            <div className={styles.calendarHeader}>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="flex justify-between items-center mb-6">
               <button 
-                className={styles.monthNavButton}
+                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors text-xl"
                 onClick={() => navigateMonth('prev')}
               >
                 ⬅️
               </button>
-              <h3>{currentMonth.toLocaleDateString('pl-PL', { month: 'long', year: 'numeric' })}</h3>
+              <h3 className="text-xl font-bold text-gray-800">{currentMonth.toLocaleDateString('pl-PL', { month: 'long', year: 'numeric' })}</h3>
               <button 
-                className={styles.monthNavButton}
+                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors text-xl"
                 onClick={() => navigateMonth('next')}
               >
                 ➡️
               </button>
             </div>
             
-            <div className={styles.calendarGrid}>
-              <div className={styles.calendarWeekdays}>
+            <div>
+              <div className="grid grid-cols-7 gap-1 mb-2">
                 {['Ndz', 'Pon', 'Wt', 'Śr', 'Czw', 'Pt', 'Sob'].map(day => (
-                  <div key={day} className={styles.weekdayHeader}>{day}</div>
+                  <div key={day} className="text-center text-sm font-semibold text-gray-600 py-2">{day}</div>
                 ))}
               </div>
               
-              <div className={styles.calendarDays}>
+              <div className="grid grid-cols-7 gap-1">
                 {getCurrentMonthDays().map((date, index) => {
                   if (!date) {
-                    return <div key={index} className={styles.emptyDay}></div>;
+                    return <div key={index} className="aspect-square"></div>;
                   }
                   
                   const dateString = formatDate(date);
@@ -427,13 +460,31 @@ export default function WaiterPage() {
                   return (
                     <div 
                       key={index} 
-                      className={`${styles.calendarDay} ${isToday ? styles.today : ''} ${isPast ? styles.pastDay : ''} ${isSelected ? styles.selectedDay : ''}`}
+                      className={`aspect-square flex flex-col items-center justify-center rounded-lg cursor-pointer transition-colors ${
+                        isToday && isSelected 
+                          ? 'bg-primary text-white' 
+                          : isToday 
+                          ? 'bg-blue-100 text-blue-800' 
+                          : isSelected 
+                          ? 'bg-primary text-white' 
+                          : isPast 
+                          ? 'bg-gray-100 text-gray-400' 
+                          : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+                      }`}
                       onClick={() => setSelectedDate(dateString)}
                     >
-                      <div className={styles.dayNumber}>{date.getDate()}</div>
+                      <div className="font-medium">{date.getDate()}</div>
                       {reservationCount > 0 && (
-                        <div className={styles.reservationCount}>
-                          <span className={styles.countBadge}>{reservationCount}</span>
+                        <div className="mt-1">
+                          <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+                            isToday && isSelected 
+                              ? 'bg-white text-primary' 
+                              : isSelected 
+                              ? 'bg-white text-primary' 
+                              : 'bg-primary text-white'
+                          }`}>
+                            {reservationCount}
+                          </span>
                         </div>
                       )}
                     </div>
@@ -443,39 +494,43 @@ export default function WaiterPage() {
             </div>
           </div>
 
-          <div className={styles.reservationsPanel}>
-            <div className={styles.dateSelector}>
-              <h3>Rezerwacje na {selectedDate}</h3>
-              <label className={styles.archiveToggle}>
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="mb-6 pb-4 border-b">
+              <h3 className="text-xl font-bold text-gray-800 mb-4">Rezerwacje na {selectedDate}</h3>
+              <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={showArchivedReservations}
                   onChange={(e) => setShowArchivedReservations(e.target.checked)}
+                  className="w-4 h-4"
                 />
-                Pokaż zarchiwizowane rezerwacje
+                <span className="text-sm text-gray-700">Pokaż zarchiwizowane rezerwacje</span>
               </label>
             </div>
 
-            <div className={styles.reservationsList}>
+            <div className="space-y-4 max-h-[600px] overflow-y-auto">
               {dayReservations.length === 0 ? (
-                <p className={styles.noReservations}>
+                <p className="text-center py-8 text-gray-500 italic">
                   {showArchivedReservations ? 'Brak zarchiwizowanych rezerwacji' : 'Brak aktywnych rezerwacji'} na wybraną datę
                 </p>
               ) : (
                 dayReservations.map(reservation => (
-                  <div key={reservation.id} className={styles.reservationCard}>
-                    <div className={styles.reservationHeader}>
-                      <h4>Stolik {reservation.tableNumber} - {reservation.reservationHour}</h4>
-                      <div className={styles.statusInfo}>
-                        <span className={`${styles.statusBadge} ${styles[reservation.status]}`}>
-                          {reservation.status === 'pending' && 'Oczekująca'}
-                          {reservation.status === 'accepted' && 'Zaakceptowana'}
-                          {reservation.status === 'rejected' && 'Odrzucona'}
-                          {reservation.status === 'cancelled' && 'Anulowana'}
-                        </span>
-                      </div>
+                  <div key={reservation.id} className="bg-gray-50 rounded-lg p-4 border-l-4 border-primary">
+                    <div className="flex justify-between items-start mb-3">
+                      <h4 className="font-bold text-gray-800">Stolik {reservation.tableNumber} - {reservation.reservationHour}</h4>
+                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                        reservation.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                        reservation.status === 'accepted' ? 'bg-green-100 text-green-800' :
+                        reservation.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {reservation.status === 'pending' && 'Oczekująca'}
+                        {reservation.status === 'accepted' && 'Zaakceptowana'}
+                        {reservation.status === 'rejected' && 'Odrzucona'}
+                        {reservation.status === 'cancelled' && 'Anulowana'}
+                      </span>
                     </div>
-                    <div className={styles.reservationDetails}>
+                    <div className="space-y-1 text-sm text-gray-700">
                       <p><strong>Klient:</strong> {reservation.customerName}</p>
                       <p><strong>Email:</strong> {reservation.customerEmail}</p>
                       <p><strong>Telefon:</strong> {reservation.customerPhone}</p>
@@ -488,8 +543,13 @@ export default function WaiterPage() {
           </div>
         </div>
 
-        <div className={styles.backButtonContainer}>
-          <button className={styles.backButton} onClick={() => setView(null)}>⬅ Wróć</button>
+        <div className="flex justify-center">
+          <button 
+            className="px-6 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
+            onClick={() => setView(null)}
+          >
+            ⬅ Wróć
+          </button>
         </div>
       </div>
     );

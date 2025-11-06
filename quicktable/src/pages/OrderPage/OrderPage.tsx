@@ -1,18 +1,13 @@
 import { useEffect, useState } from 'react';
-import {
-  collection,
-  doc,
-  getDocs,
-  updateDoc,
-} from 'firebase/firestore';
-import { db } from '../../firebase/firebaseConfig';
 import { useNavigate } from 'react-router-dom';
 import type { Table, OrderItem } from '../../types/types';
-import styles from './OrderPage.module.css';
-import { createOrder } from '../../utils/databaseUtils';
+import { orderAPI, tableAPI, menuAPI } from '../../utils/apiClient';
+import Breadcrumb from '../../components/Breadcrumb/Breadcrumb';
+import { useAuth } from '../../hooks/useAuth';
 
 export default function OrderPage() {
   const navigate = useNavigate();
+  const { userData } = useAuth();
   const [name, setName] = useState('');
   const [tables, setTables] = useState<Table[]>([]);
   const [selectedTableId, setSelectedTableId] = useState('');
@@ -21,23 +16,23 @@ export default function OrderPage() {
   const [menuItems, setMenuItems] = useState<{ id: string; name: string; price: number }[]>([]);
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [orderSaved, setOrderSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Fetch available tables and filter for free ones
+  useEffect(() => {
+    if (userData?.displayName) {
+      setName(userData.displayName);
+    }
+  }, [userData]);
+
   useEffect(() => {
     const fetchTables = async () => {
       try {
-        const querySnapshot = await getDocs(collection(db, 'tables'));
-        const freeTables = querySnapshot.docs
-          .map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-          }) as Table)
-          .filter(table => table.status === 'free');
-
-        setTables(freeTables);
+        const allTables = await tableAPI.getAll({ status: 'free' });
+        setTables(allTables as Table[]);
         setLoading(false);
       } catch (error) {
         console.error('Błąd podczas pobierania stolików:', error);
+        setError('Nie udało się pobrać listy stolików. Sprawdź czy serwisy są uruchomione.');
         setLoading(false);
       }
     };
@@ -45,18 +40,19 @@ export default function OrderPage() {
     fetchTables();
   }, []);
 
-  // Fetch menu items for order selection
   useEffect(() => {
     const fetchMenu = async () => {
       try {
-        const snapshot = await getDocs(collection(db, 'menu'));
-        const items = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...(doc.data() as { name: string; price: number }),
-        }));
-        setMenuItems(items);
-      } catch (error) {
+        const items = await menuAPI.getAll();
+        setMenuItems(items.map(item => ({
+          id: item.id,
+          name: item.name,
+          price: item.price
+        })));
+      } catch (error: any) {
         console.error('Błąd podczas pobierania menu:', error);
+        const errorMessage = error.message || 'Nie udało się pobrać menu.';
+        setError(`${errorMessage} Upewnij się, że wszystkie serwisy są uruchomione (npm run services:dev lub npm start).`);
       }
     };
 
@@ -68,11 +64,7 @@ export default function OrderPage() {
     if (!name || !selectedTableId) return;
 
     try {
-      const tableRef = doc(db, 'tables', selectedTableId);
-      await updateDoc(tableRef, {
-        status: 'occupied',
-        customerName: name,
-      });
+      await tableAPI.updateStatus(selectedTableId, 'occupied', name);
 
       const table = tables.find((t) => t.id === selectedTableId);
       setSelectedTable(table ?? null);
@@ -107,16 +99,11 @@ export default function OrderPage() {
   const handleSaveOrder = async () => {
     if (!selectedTableId || orderItems.length === 0) return;
 
-    const total = orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-
     try {
-      await createOrder({
+      await orderAPI.create({
         tableId: selectedTableId,
         items: orderItems,
-        total,
-        status: 'pending',
         waiterName: '',
-        dataState: 1,
       });
 
       setOrderSaved(true);
@@ -125,32 +112,51 @@ export default function OrderPage() {
     }
   };
 
-  if (loading) return <p>Ładowanie dostępnych stolików...</p>;
+  if (loading) return <p className="text-center py-8">Ładowanie dostępnych stolików...</p>;
 
   return (
-    <div className={styles.orderPage}>
-      <div className={styles.headerSection}>
-        <h2>Rozpocznij zamówienie</h2>
+    <div className="w-full">
+      {error && (
+        <div className="p-4 bg-red-50 border-l-4 border-red-500 text-red-700 rounded-lg mb-4 shadow-sm">
+          <p className="font-medium">{error}</p>
+        </div>
+      )}
+      <Breadcrumb 
+        items={[
+          { label: 'Strona główna', path: '/client' },
+          { label: 'Zamówienie', path: '/order' },
+          ...(selectedTable ? [{ label: `Stolik ${selectedTable.number}` }] : []),
+          ...(orderSaved ? [{ label: 'Zamówienie zapisane' }] : [])
+        ]}
+      />
+      <div className="mb-8">
+        <h2 className="text-4xl font-bold text-gray-800 bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent mb-2">
+          Rozpocznij zamówienie
+        </h2>
+        <p className="text-gray-600 font-medium">Wybierz stolik i dodaj pozycje z menu</p>
       </div>
 
       {!selectedTable && (
-        <form onSubmit={handleSubmit} className={styles.orderForm}>
-          <label>
-            Twoje imię:
+        <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-lg p-6 space-y-6 mb-6 border border-gray-100">
+          <label className="block">
+            <span className="block mb-2 font-semibold text-gray-700">Twoje imię:</span>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
+              className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-all bg-gray-50 focus:bg-white"
+              placeholder="Wprowadź swoje imię"
             />
           </label>
 
-          <label>
-            Wybierz stolik:
+          <label className="block">
+            <span className="block mb-2 font-semibold text-gray-700">Wybierz stolik:</span>
             <select
               value={selectedTableId}
               onChange={(e) => setSelectedTableId(e.target.value)}
               required
+              className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-all bg-gray-50 focus:bg-white"
             >
               <option value="">-- wybierz wolny stolik --</option>
               {tables.map((table) => (
@@ -161,21 +167,22 @@ export default function OrderPage() {
             </select>
           </label>
 
-          <button type="submit" className={styles.submitButton}>
+          <button type="submit" className="w-full px-6 py-3 bg-gradient-to-r from-primary to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
             Przejdź dalej
           </button>
         </form>
       )}
 
       {selectedTable && !orderSaved && (
-        <div className={styles.menuSection}>
-          <h3>Witaj, {name}! Dodaj zamówienie dla stolika {selectedTable.number}</h3>
+        <div className="bg-white rounded-lg shadow-md p-6 space-y-4 mb-6">
+          <h3 className="text-xl font-bold text-gray-800 mb-4">Witaj, {name}! Dodaj zamówienie dla stolika {selectedTable.number}</h3>
           
           {orderItems.map((item, index) => (
-            <div key={index} className={styles.orderItem}>
+            <div key={index} className="flex gap-2 items-end">
               <select
                 value={item.name}
                 onChange={(e) => handleChangeItem(index, e.target.value)}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
               >
                 <option value="">-- Wybierz danie --</option>
                 {menuItems.map((menuItem) => (
@@ -187,37 +194,72 @@ export default function OrderPage() {
               <button
                 type="button"
                 onClick={() => handleRemoveItem(index)}
-                className={styles.removeItemButton}
+                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
               >
                 Usuń
               </button>
             </div>
           ))}
 
-          <button onClick={handleAddItem} className={styles.addItemButton}>
+          <button 
+            onClick={handleAddItem} 
+            className="w-full px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
+          >
             Dodaj danie
           </button>
 
-          <p className={styles.total}>
+          <p className="text-xl font-bold text-gray-800 pt-4 border-t">
             Suma: {orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0)} zł
           </p>
 
-          <button onClick={handleSaveOrder} className={styles.submitButton}>
+          <button 
+            onClick={handleSaveOrder} 
+            className="w-full px-6 py-3 bg-primary text-white rounded-lg hover:bg-blue-600 transition-colors font-semibold"
+          >
             Zapisz zamówienie
           </button>
         </div>
       )}
 
       {orderSaved && (
-        <div className={styles.successMessage}>
-          <h3>Zamówienie zostało zapisane!</h3>
+        <div className="bg-green-100 border border-green-400 text-green-700 rounded-lg p-6 mb-6">
+          <h3 className="text-xl font-bold">Zamówienie zostało zapisane!</h3>
         </div>
       )}
 
-      <div className={styles.backButtonContainer}>
-        <button className={styles.backButton} onClick={() => navigate('/')}>
-          ⬅ Wróć do strony głównej
-        </button>
+      <div className="flex justify-center">
+        {orderSaved ? (
+          <button 
+            className="px-6 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
+            onClick={() => {
+              setOrderSaved(false);
+              setSelectedTable(null);
+              setSelectedTableId('');
+              setName('');
+              setOrderItems([]);
+            }}
+          >
+            ⬅ Rozpocznij nowe zamówienie
+          </button>
+        ) : selectedTable ? (
+          <button 
+            className="px-6 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
+            onClick={() => {
+              setSelectedTable(null);
+              setSelectedTableId('');
+              setOrderItems([]);
+            }}
+          >
+            ⬅ Wróć do wyboru stolika
+          </button>
+        ) : (
+          <button 
+            className="px-6 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
+            onClick={() => navigate('/client')}
+          >
+            ⬅ Wróć do strony głównej
+          </button>
+        )}
       </div>
     </div>
   );

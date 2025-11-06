@@ -1,0 +1,143 @@
+version: '3.8'
+
+services:
+  api-gateway:
+    build:
+      context: ./services/api-gateway
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - ORDER_SERVICE_URL=http://order-service:3001
+      - RESERVATION_SERVICE_URL=http://reservation-service:3002
+      - TABLE_SERVICE_URL=http://table-service:3003
+      - MENU_SERVICE_URL=http://menu-service:3004
+      - HOURS_SERVICE_URL=http://hours-service:3005
+      - NOTIFICATION_SERVICE_URL=http://notification-service:3006
+      - REALTIME_SERVICE_URL=http://realtime-service:3007
+      - AUTH_SERVICE_URL=http://auth-service:3008
+    depends_on:
+      - order-service
+      - reservation-service
+      - table-service
+      - menu-service
+      - hours-service
+      - notification-service
+      - realtime-service
+      - auth-service
+    networks:
+      - quicktable-network
+
+  order-service:
+    build:
+      context: ./services/order-service
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3001"
+    volumes:
+      - ../serviceAccountKey.json:/app/serviceAccountKey.json:ro
+    environment:
+      - PORT=3001
+      - SERVICE_ACCOUNT_PATH=/app/serviceAccountKey.json
+    networks:
+      - quicktable-network
+
+  reservation-service:
+    build:
+      context: ./services/reservation-service
+      dockerfile: Dockerfile
+    ports:
+      - "3002:3002"
+    volumes:
+      - ../serviceAccountKey.json:/app/serviceAccountKey.json:ro
+    environment:
+      - PORT=3002
+      - SERVICE_ACCOUNT_PATH=/app/serviceAccountKey.json
+    networks:
+      - quicktable-network
+
+  table-service:
+    build:
+      context: ./services/table-service
+      dockerfile: Dockerfile
+    ports:
+      - "3003:3003"
+    volumes:
+      - ../serviceAccountKey.json:/app/serviceAccountKey.json:ro
+    environment:
+      - PORT=3003
+      - SERVICE_ACCOUNT_PATH=/app/serviceAccountKey.json
+    networks:
+      - quicktable-network
+
+  menu-service:
+    build:
+      context: ./services/menu-service
+      dockerfile: Dockerfile
+    ports:
+      - "3004:3004"
+    volumes:
+      - ../serviceAccountKey.json:/app/serviceAccountKey.json:ro
+    environment:
+      - PORT=3004
+      - SERVICE_ACCOUNT_PATH=/app/serviceAccountKey.json
+    networks:
+      - quicktable-network
+
+  hours-service:
+    build:
+      context: ./services/hours-service
+      dockerfile: Dockerfile
+    ports:
+      - "3005:3005"
+    volumes:
+      - ../serviceAccountKey.json:/app/serviceAccountKey.json:ro
+    environment:
+      - PORT=3005
+      - SERVICE_ACCOUNT_PATH=/app/serviceAccountKey.json
+    networks:
+      - quicktable-network
+
+  notification-service:
+    build:
+      context: ./services/notification-service
+      dockerfile: Dockerfile
+    ports:
+      - "3006:3006"
+    environment:
+      - PORT=3006
+      - EMAIL_SERVICE=${EMAIL_SERVICE:-gmail}
+      - EMAIL_USER=${EMAIL_USER:-}
+      - EMAIL_PASS=${EMAIL_PASS:-}
+    networks:
+      - quicktable-network
+
+  realtime-service:
+    build:
+      context: ./services/realtime-service
+      dockerfile: Dockerfile
+    ports:
+      - "3007:3007"
+    environment:
+      - PORT=3007
+    networks:
+      - quicktable-network
+
+  auth-service:
+    build:
+      context: ./services/auth-service
+      dockerfile: Dockerfile
+    ports:
+      - "3008:3008"
+    volumes:
+      - ../serviceAccountKey.json:/app/serviceAccountKey.json:ro
+    environment:
+      - PORT=3008
+      - SERVICE_ACCOUNT_PATH=/app/serviceAccountKey.json
+    networks:
+      - quicktable-network
+
+networks:
+  quicktable-network:
+    driver: bridge
+

@@ -23,7 +23,7 @@ export interface Order {
   timestamp: Timestamp;
   status: 'pending' | 'completed' | 'done';
   waiterName?: string;
-  dataState?: number; // 1 = active, 2 = archived
+  dataState?: number;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -52,8 +52,6 @@ export interface MenuItem {
 
 /**
  * Reservation with conflict checking and status management
- * dataState: 1 = active, 2 = archived
- * isAccepted: boolean for quick status check
  */
 export interface Reservation {
   id: string;
@@ -81,24 +79,36 @@ export interface Reservation {
  */
 export interface RestaurantHours {
   id: string;
-  date: string; // Specific date in YYYY-MM-DD format
-  dayName: string; // Day name for display
+  date: string;
+  dayName: string;
   isOpen: boolean;
   openTime: string;
   closeTime: string;
   timeSlots: string[];
-  blockedHours: string[]; // Time ranges that are blocked for reservations
+  blockedHours: string[];
   createdAt?: Date;
   updatedAt?: Date;
 }
 
-// Firebase Authentication Types
-/**
- * Firebase authentication error interface
- */
 export interface AuthError {
   code: string;
   message: string;
+}
+
+/**
+ * User roles in the system
+ */
+export type UserRole = 'admin' | 'manager' | 'client' | 'waiter' | 'kitchen';
+
+/**
+ * Extended user interface with role information
+ */
+export interface AppUser {
+  uid: string;
+  email: string | null;
+  displayName: string | null;
+  role: UserRole;
+  photoURL?: string | null;
 }
 
 /**
@@ -115,7 +125,8 @@ export interface AuthUser {
  */
 export interface AuthActions {
   login: (email: string, password: string) => Promise<UserCredential>;
-  register: (email: string, password: string) => Promise<UserCredential>;
+  register: (email: string, password: string, role?: UserRole) => Promise<UserCredential>;
+  loginWithGoogle: () => Promise<UserCredential>;
   logout: () => Promise<void>;
 }
 
@@ -124,6 +135,8 @@ export interface AuthActions {
  */
 export interface AuthState {
   user: User | null;
+  userRole: UserRole | null;
+  userData: AppUser | null;
   loading: boolean;
   error: FirebaseError | null;
 }

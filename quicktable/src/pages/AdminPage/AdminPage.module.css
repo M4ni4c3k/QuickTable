@@ -2864,3 +2864,250 @@
     grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
   }
 }
+
+/* Reports Styles */
+.reportsContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.dateRangeSelector {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  padding: 1rem;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.dateRangeSelector label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.dateRangeSelector input[type="date"] {
+  padding: 0.5rem;
+  border: 2px solid #dee2e6;
+  border-radius: 6px;
+  font-size: 1rem;
+  transition: border-color 0.3s ease;
+}
+
+.dateRangeSelector input[type="date"]:focus {
+  outline: none;
+  border-color: #007bff;
+}
+
+.reportsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.reportCard {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e9ecef;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.reportCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+}
+
+.reportCardTitle {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #2c3e50;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 2px solid #e9ecef;
+}
+
+.reportStats {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.statItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  background: #f8f9fa;
+  border-radius: 6px;
+  transition: background-color 0.3s ease;
+}
+
+.statItem:hover {
+  background: #e9ecef;
+}
+
+.statLabel {
+  font-weight: 500;
+  color: #6c757d;
+}
+
+.statValue {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: #2c3e50;
+}
+
+.popularItemsList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.popularItem {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  gap: 1rem;
+  align-items: center;
+  padding: 0.75rem;
+  background: #f8f9fa;
+  border-radius: 6px;
+  transition: background-color 0.3s ease;
+}
+
+.popularItem:hover {
+  background: #e9ecef;
+}
+
+.popularItemRank {
+  font-weight: 700;
+  color: #007bff;
+  font-size: 1.1rem;
+}
+
+.popularItemName {
+  font-weight: 500;
+  color: #2c3e50;
+}
+
+.popularItemCount {
+  font-weight: 600;
+  color: #6c757d;
+  font-size: 0.9rem;
+}
+
+.popularItemRevenue {
+  font-weight: 700;
+  color: #28a745;
+}
+
+.noData {
+  text-align: center;
+  color: #6c757d;
+  padding: 2rem;
+  font-style: italic;
+}
+
+.dbVerificationCard {
+  background: linear-gradient(135deg, #e7f3ff 0%, #cfe8ff 100%);
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border: 2px solid #007bff;
+}
+
+.dbVerificationDescription {
+  color: #2c3e50;
+  margin-bottom: 1rem;
+  font-size: 0.95rem;
+}
+
+.dbCollectionsList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.dbCollectionItem {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 1rem;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background: white;
+  border-radius: 6px;
+  border-left: 4px solid #28a745;
+}
+
+.dbCollectionName {
+  font-weight: 600;
+  color: #2c3e50;
+  font-family: monospace;
+}
+
+.dbCollectionService {
+  font-weight: 500;
+  color: #6c757d;
+  font-size: 0.9rem;
+}
+
+.dbCollectionStatus {
+  font-weight: 700;
+  color: #28a745;
+  font-size: 1.2rem;
+}
+
+.dbVerificationNote {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: white;
+  border-radius: 6px;
+  border-left: 4px solid #28a745;
+}
+
+.dbVerificationNote p {
+  margin: 0;
+  font-weight: 600;
+  color: #28a745;
+}
+
+@media (max-width: 768px) {
+  .reportsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .dateRangeSelector {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .popularItem {
+    grid-template-columns: auto 1fr;
+    grid-template-rows: auto auto;
+  }
+
+  .popularItemRank {
+    grid-row: 1;
+  }
+
+  .popularItemName {
+    grid-row: 1;
+  }
+
+  .popularItemCount {
+    grid-row: 2;
+  }
+
+  .popularItemRevenue {
+    grid-row: 2;
+    justify-self: end;
+  }
+}
